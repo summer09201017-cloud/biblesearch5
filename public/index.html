@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>多譯本聖經查詢</title>
+    <meta
+      name="description"
+      content="即時查詢 ASV、KJV、FHL和合本、新譯本、ESV，支援手機與桌機的多譯本聖經查詢頁。"
+    />
+    <meta name="theme-color" content="#0d3b48" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="聖經查詢" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260321b" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/styles.css?v=20260321b" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">FHL Multi-Version Bible Search</p>
+          <h1>多譯本聖經查詢</h1>
+          <p class="lead">
+            一次比對 <strong>FHL和合本</strong>、<strong>ESV</strong>、<strong>新譯本</strong>、
+            <strong>ASV</strong>、<strong>KJV</strong>。支援手機直排與桌機多欄閱讀。
+          </p>
+        </div>
+
+        <section class="app-card" aria-label="查詢工具">
+          <div class="mode-toggle" role="tablist" aria-label="查詢模式">
+            <button
+              type="button"
+              class="mode-button is-active"
+              data-mode="passage"
+              role="tab"
+              aria-selected="true"
+            >
+              經文定位
+            </button>
+            <button
+              type="button"
+              class="mode-button"
+              data-mode="keyword"
+              role="tab"
+              aria-selected="false"
+            >
+              關鍵字搜尋
+            </button>
+          </div>
+
+          <form id="search-form" class="search-form">
+            <label class="sr-only" for="query-input">查詢內容</label>
+            <div class="search-row">
+              <input
+                id="query-input"
+                name="query"
+                class="query-input"
+                type="text"
+                autocomplete="off"
+                placeholder="例如：約 3:16-18"
+                required
+              />
+              <button id="submit-button" class="primary-button" type="submit">
+                立即查詢
+              </button>
+            </div>
+
+            <div id="keyword-controls" class="control-row" hidden>
+              <label class="field">
+                <span>依哪個譯本搜尋</span>
+                <select id="keyword-version" class="select-field">
+                  <option value="unv" selected>FHL和合本</option>
+                  <option value="ncv">新譯本</option>
+                  <option value="esv">ESV</option>
+                  <option value="kjv">KJV</option>
+                  <option value="asv">ASV</option>
+                  <option value="auto">自動判斷</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>載入筆數</span>
+                <select id="result-limit" class="select-field">
+                  <option value="all" selected>全部</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="40">40</option>
+                </select>
+              </label>
+            </div>
+          </form>
+
+          <div class="helper-row">
+            <div>
+              <p id="mode-description" class="helper-title">
+                輸入章節範圍，例如 `約 3:16-18`、`John 1`、`創 1:1-5`。
+              </p>
+              <div id="example-chips" class="examples" aria-label="範例查詢"></div>
+            </div>
+
+            <div class="action-row">
+              <button id="share-button" class="secondary-button" type="button" hidden>
+                分享這次查詢
+              </button>
+              <button id="install-button" class="secondary-button" type="button" hidden>
+                安裝成 App
+              </button>
+            </div>
+          </div>
+        </section>
+      </header>
+
+      <main class="main-content">
+        <section class="status-bar">
+          <div>
+            <p class="status-label">目前狀態</p>
+            <p id="status-text" class="status-text">等待輸入查詢條件。</p>
+          </div>
+          <div id="status-pills" class="status-pills"></div>
+        </section>
+
+        <section id="results" class="results" aria-live="polite"></section>
+      </main>
+
+      <footer class="footer">
+        <p>
+          ESV 由信望愛聖經工具即時查詢；ASV、KJV、和合本、新譯本則讀取本地 JSON 資料庫。若有譯本文字版權問題，請以各譯本權利人公告為準。
+        </p>
+        <p class="footer-links">
+          <a href="https://bible.fhl.net/api/" target="_blank" rel="noreferrer">信望愛 API 文件</a>
+          <a href="https://bible.fhl.net/json/qsb.php" target="_blank" rel="noreferrer">qsb.php</a>
+          <a href="https://bible.fhl.net/json/se.php" target="_blank" rel="noreferrer">se.php</a>
+          <a href="https://www.fhl.net/main/fhl/fhl8.html" target="_blank" rel="noreferrer">版權說明</a>
+        </p>
+        <p id="copyright-year"></p>
+      </footer>
+    </div>
+
+    <script type="module" src="/app.js?v=20260321b"></script>
+    <script type="module" src="/pwa.js?v=20260321b"></script>
+  </body>
+</html>
