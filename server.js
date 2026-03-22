@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, "public");
-const dataDir = path.join(__dirname, "data");
+const moduleFilename = fileURLToPath(import.meta.url);
+const moduleDir = path.dirname(moduleFilename);
+const publicDir = path.join(moduleDir, "public");
+const dataDir = path.join(moduleDir, "data");
 const localBiblePath = path.join(dataDir, "bible_data.json");
 const port = Number(process.env.PORT || 4173);
 
