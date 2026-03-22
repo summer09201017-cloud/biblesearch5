@@ -14,7 +14,7 @@ const MODE_COPY = {
   },
   keyword: {
     placeholder: "例如：愛、恩典、love、faith",
-    helper: "先用指定譯本搜尋全本聖經（含舊約），再把同一節的五個譯本一起列出。",
+    helper: "先用指定譯本搜尋全本聖經（含舊約），英文關鍵字會優先用 ESV，再把同一節的五個譯本一起列出。",
     examples: ["愛", "恩典", "love", "\"eternal life\""]
   }
 };
@@ -265,11 +265,18 @@ function getTranslationLabel(versionId) {
 }
 
 function resolveKeywordVersion(query, selectedVersion) {
+  const hasHan = /[\p{Script=Han}]/u.test(query);
+  const hasLatin = /[A-Za-z]/.test(query);
+
+  if (hasLatin && !hasHan && (!selectedVersion || selectedVersion === "auto" || selectedVersion === "unv")) {
+    return "esv";
+  }
+
   if (selectedVersion && selectedVersion !== "auto") {
     return selectedVersion;
   }
 
-  return /[\p{Script=Han}]/u.test(query) ? "unv" : "esv";
+  return hasHan ? "unv" : "esv";
 }
 
 function mergePassageResults(recordsByVersion) {
