@@ -612,9 +612,16 @@ export function startServer(listenPort = port) {
   return server;
 }
 
+const entryScript =
+  typeof process !== "undefined" &&
+  Array.isArray(process.argv) &&
+  process.argv[1]
+    ? process.argv[1]
+    : null;
+
 const isMainModule =
-  process.argv[1] &&
-  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+  entryScript !== null &&
+  pathToFileURL(path.resolve(entryScript)).href === import.meta.url;
 
 if (isMainModule) {
   startServer();
