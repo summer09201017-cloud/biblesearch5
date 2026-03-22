@@ -3,8 +3,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const moduleFilename = fileURLToPath(import.meta.url);
-const moduleDir = path.dirname(moduleFilename);
+const moduleUrl =
+  typeof import.meta.url === "string"
+    ? import.meta.url
+    : null;
+
+const moduleDir =
+  typeof __dirname === "string"
+    ? __dirname
+    : moduleUrl
+      ? path.dirname(fileURLToPath(moduleUrl))
+      : process.cwd();
+
 const publicDir = path.join(moduleDir, "public");
 const dataDir = path.join(moduleDir, "data");
 const localBiblePath = path.join(dataDir, "bible_data.json");
@@ -619,9 +629,15 @@ const entryScript =
     ? process.argv[1]
     : null;
 
+const currentModuleHref =
+  typeof __filename === "string"
+    ? pathToFileURL(__filename).href
+    : moduleUrl;
+
 const isMainModule =
   entryScript !== null &&
-  pathToFileURL(path.resolve(entryScript)).href === import.meta.url;
+  currentModuleHref !== null &&
+  pathToFileURL(path.resolve(entryScript)).href === currentModuleHref;
 
 if (isMainModule) {
   startServer();
