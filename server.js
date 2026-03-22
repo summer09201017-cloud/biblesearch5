@@ -21,14 +21,15 @@ const MIME_TYPES = {
   ".webmanifest": "application/manifest+json; charset=utf-8"
 };
 
-const VERSION_WHITELIST = new Set(["asv", "kjv", "unv", "ncv", "esv"]);
-const LOCAL_VERSION_IDS = new Set(["asv", "kjv", "unv", "ncv"]);
+const VERSION_WHITELIST = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc"]);
+const LOCAL_VERSION_IDS = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc"]);
 const VERSION_NAMES = {
   asv: "ASV",
   kjv: "KJV",
   unv: "和合本",
-  ncv: "新譯本",
-  esv: "ESV"
+  esv: "ESV",
+  lcc: "呂振中譯本",
+  ncv: "新譯本"
 };
 
 const FHL_BASE = "https://bible.fhl.net/json";
@@ -187,6 +188,8 @@ async function loadLocalBibleStore() {
               asv: String(entry.ASV || "").trim(),
               kjv: String(entry.KJV || "").trim(),
               unv: String(entry.CUV || "").trim(),
+              esv: String(entry.ESV || "").trim(),
+              lcc: String(entry.LCC || "").trim(),
               ncv: String(entry.NCV || "").trim()
             }
           };
@@ -195,6 +198,8 @@ async function loadLocalBibleStore() {
             asv: normalizeSearchText(verse.texts.asv),
             kjv: normalizeSearchText(verse.texts.kjv),
             unv: normalizeSearchText(verse.texts.unv),
+            esv: normalizeSearchText(verse.texts.esv),
+            lcc: normalizeSearchText(verse.texts.lcc),
             ncv: normalizeSearchText(verse.texts.ncv)
           };
 

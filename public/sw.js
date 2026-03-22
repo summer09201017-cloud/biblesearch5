@@ -1,13 +1,13 @@
-const VERSION = "20260321b";
+const VERSION = "20260322b";
 const STATIC_CACHE = `bible-static-${VERSION}`;
 const API_CACHE = `bible-api-${VERSION}`;
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260321b",
-  "/app.js?v=20260321b",
-  "/pwa.js?v=20260321b",
-  "/manifest.webmanifest?v=20260321b",
+  "/styles.css?v=20260322b",
+  "/app.js?v=20260322b",
+  "/pwa.js?v=20260322b",
+  "/manifest.webmanifest?v=20260322b",
   "/offline.html",
   "/icons/icon.svg",
   "/icons/icon-192.png",

@@ -492,6 +492,11 @@ a {
   color: #0e5a5d;
 }
 
+.version-badge.lcc {
+  background: rgba(107, 79, 153, 0.14);
+  color: #5f4490;
+}
+
 .translation-meta {
   font-size: 0.84rem;
 }

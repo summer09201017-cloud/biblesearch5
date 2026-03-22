@@ -1,10 +1,22 @@
 const TRANSLATIONS = [
-  { id: "unv", label: "和合本", fullLabel: "FHL 和合本" },
+  { id: "unv", label: "和合本", fullLabel: "和合本" },
   { id: "esv", label: "ESV", fullLabel: "English Standard Version" },
+  { id: "lcc", label: "呂振中", fullLabel: "呂振中譯本" },
   { id: "ncv", label: "新譯本", fullLabel: "新譯本" },
   { id: "asv", label: "ASV", fullLabel: "American Standard Version" },
   { id: "kjv", label: "KJV", fullLabel: "King James Version" }
 ];
+const CHINESE_SEARCH_VERSION_IDS = ["unv", "lcc", "ncv"];
+const BIBLE_BOOK_ORDER = new Map([
+  "Gen", "Exod", "Lev", "Num", "Deut", "Josh", "Judg", "Ruth",
+  "1Sam", "2Sam", "1Kgs", "2Kgs", "1Chr", "2Chr", "Ezra", "Neh", "Esth",
+  "Job", "Ps", "Prov", "Eccl", "Song", "Isa", "Jer", "Lam", "Ezek", "Dan",
+  "Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph",
+  "Hag", "Zech", "Mal", "Matt", "Mark", "Luke", "John", "Acts", "Rom",
+  "1Cor", "2Cor", "Gal", "Eph", "Phil", "Col", "1Thess", "2Thess",
+  "1Tim", "2Tim", "Titus", "Phlm", "Heb", "Jas", "1Pet", "2Pet",
+  "1John", "2John", "3John", "Jude", "Rev"
+].map((engs, index) => [engs, index]));
 
 const MODE_COPY = {
   passage: {
@@ -14,7 +26,7 @@ const MODE_COPY = {
   },
   keyword: {
     placeholder: "例如：愛、恩典、love、faith",
-    helper: "先用指定譯本搜尋全本聖經（含舊約），英文關鍵字會優先用 ESV，再把同一節的五個譯本一起列出。",
+    helper: "中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，再把同一節的六個譯本一起列出。",
     examples: ["愛", "恩典", "love", "\"eternal life\""]
   }
 };
@@ -94,7 +106,7 @@ function showLoadingCard() {
   dom.results.innerHTML = `
     <article class="feedback-card loading">
       <h2>正在載入資料</h2>
-      <p>正在向信望愛查詢經文，並補齊五個譯本的內容。</p>
+      <p>正在整理本地經文資料，並補齊六個譯本的內容。</p>
     </article>
   `;
 }
@@ -112,7 +124,7 @@ function showEmptyState() {
   dom.results.innerHTML = `
     <section class="empty-state">
       <h2>輸入經文或關鍵字開始查詢</h2>
-      <p>經文定位適合直接查章節，關鍵字搜尋適合先找命中的節，再對照五個譯本。</p>
+      <p>經文定位適合直接查章節，關鍵字搜尋適合先找命中的節，再對照六個譯本。</p>
     </section>
   `;
 }
@@ -264,19 +276,54 @@ function getTranslationLabel(versionId) {
   return TRANSLATIONS.find((item) => item.id === versionId)?.label || versionId;
 }
 
-function resolveKeywordVersion(query, selectedVersion) {
+function formatTranslationLabels(versionIds) {
+  return versionIds.map((versionId) => getTranslationLabel(versionId)).join(" / ");
+}
+
+function compareBibleReference(left, right) {
+  const leftOrder = BIBLE_BOOK_ORDER.get(left.bookEn) ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = BIBLE_BOOK_ORDER.get(right.bookEn) ?? Number.MAX_SAFE_INTEGER;
+
+  if (leftOrder !== rightOrder) {
+    return leftOrder - rightOrder;
+  }
+
+  if (left.chapter !== right.chapter) {
+    return left.chapter - right.chapter;
+  }
+
+  if (left.verse !== right.verse) {
+    return left.verse - right.verse;
+  }
+
+  return 0;
+}
+
+function resolveKeywordSearchPlan(query, selectedVersion) {
   const hasHan = /[\p{Script=Han}]/u.test(query);
   const hasLatin = /[A-Za-z]/.test(query);
 
+  if (hasHan) {
+    return {
+      versions: [...CHINESE_SEARCH_VERSION_IDS],
+      sourceLabel: formatTranslationLabels(CHINESE_SEARCH_VERSION_IDS)
+    };
+  }
+
+  let resolvedVersion;
+
   if (hasLatin && !hasHan && (!selectedVersion || selectedVersion === "auto" || selectedVersion === "unv")) {
-    return "esv";
+    resolvedVersion = "esv";
+  } else if (selectedVersion && selectedVersion !== "auto") {
+    resolvedVersion = selectedVersion;
+  } else {
+    resolvedVersion = "esv";
   }
 
-  if (selectedVersion && selectedVersion !== "auto") {
-    return selectedVersion;
-  }
-
-  return hasHan ? "unv" : "esv";
+  return {
+    versions: [resolvedVersion],
+    sourceLabel: getTranslationLabel(resolvedVersion)
+  };
 }
 
 function mergePassageResults(recordsByVersion) {
@@ -313,7 +360,7 @@ async function searchPassage(query) {
   );
 
   if (settled.every((item) => item.status === "rejected")) {
-    throw new Error("目前無法向信望愛取得經文資料。");
+    throw new Error("目前無法取得經文資料。");
   }
 
   return mergePassageResults(recordsByVersion);
@@ -321,20 +368,65 @@ async function searchPassage(query) {
 
 async function searchKeyword(query) {
   const selectedVersion = dom.keywordVersion.value;
-  const resolvedVersion = resolveKeywordVersion(query, selectedVersion);
+  const searchPlan = resolveKeywordSearchPlan(query, selectedVersion);
   const limit = dom.resultLimit.value;
-  const hits = await fetchKeywordHits(resolvedVersion, query, limit);
+  const searchLimit = searchPlan.versions.length > 1 ? "all" : limit;
+  const hitsByVersion = new Map();
 
-  if (!hits.length) {
+  await Promise.all(
+    searchPlan.versions.map(async (version) => {
+      hitsByVersion.set(version, await fetchKeywordHits(version, query, searchLimit));
+    })
+  );
+
+  const mergedHits = [];
+  const hitMap = new Map();
+
+  for (const version of searchPlan.versions) {
+    const hits = hitsByVersion.get(version) || [];
+
+    for (const hit of hits) {
+      const key = `${hit.bookEn || hit.bookZh}-${hit.chapter}-${hit.verse}`;
+
+      if (!hitMap.has(key)) {
+        hitMap.set(key, {
+          bookEn: hit.bookEn,
+          bookZh: hit.bookZh,
+          chapter: hit.chapter,
+          verse: hit.verse,
+          matchedVersions: [],
+          excerpts: {}
+        });
+        mergedHits.push(hitMap.get(key));
+      }
+
+      const entry = hitMap.get(key);
+
+      if (!entry.matchedVersions.includes(version)) {
+        entry.matchedVersions.push(version);
+      }
+
+      entry.excerpts[version] = hit.excerpt;
+    }
+  }
+
+  mergedHits.sort(compareBibleReference);
+
+  const visibleHits =
+    limit === "all"
+      ? mergedHits
+      : mergedHits.slice(0, Math.max(1, Math.trunc(Number(limit))));
+
+  if (!visibleHits.length) {
     return {
       results: [],
-      resolvedVersion
+      searchPlan
     };
   }
 
   const chapterRequests = new Map();
 
-  for (const hit of hits) {
+  for (const hit of visibleHits) {
     const reference = `${hit.bookZh} ${hit.chapter}`;
     for (const translation of TRANSLATIONS) {
       const key = `${translation.id}|${reference}`;
@@ -360,7 +452,7 @@ async function searchKeyword(query) {
     }
   });
 
-  const results = hits.map((hit) => {
+  const results = visibleHits.map((hit) => {
     const reference = `${hit.bookZh} ${hit.chapter}`;
     const texts = {};
 
@@ -369,8 +461,10 @@ async function searchKeyword(query) {
         chapterData.get(`${translation.id}|${reference}`)?.get(hit.verse) || "";
     }
 
-    if (!texts[resolvedVersion]) {
-      texts[resolvedVersion] = hit.excerpt;
+    for (const matchedVersion of hit.matchedVersions) {
+      if (!texts[matchedVersion] && hit.excerpts[matchedVersion]) {
+        texts[matchedVersion] = hit.excerpts[matchedVersion];
+      }
     }
 
     return {
@@ -378,13 +472,14 @@ async function searchKeyword(query) {
       bookZh: hit.bookZh,
       chapter: hit.chapter,
       verse: hit.verse,
+      matchedVersions: hit.matchedVersions,
       texts
     };
   });
 
   return {
     results,
-    resolvedVersion
+    searchPlan
   };
 }
 
@@ -400,7 +495,7 @@ function renderStatusFromMeta() {
   ];
 
   if (state.lastMeta.mode === "keyword") {
-    pills.push(`搜尋依據：${getTranslationLabel(state.lastMeta.sourceVersion)}`);
+    pills.push(`搜尋依據：${state.lastMeta.sourceLabel}`);
   }
 
   setStatus(state.lastMeta.summary, pills);
@@ -422,7 +517,7 @@ function renderResults() {
   dom.results.innerHTML = state.results
     .map((result) => {
       const translationPanels = TRANSLATIONS.map((translation) => {
-        const text = result.texts[translation.id] || "此節在該譯本沒有回傳內容。";
+        const text = result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。";
         return `
           <article class="translation-panel">
             <div class="translation-top">
@@ -436,8 +531,8 @@ function renderResults() {
 
       const keywordMeta =
         state.lastMeta?.mode === "keyword"
-          ? `<p class="result-mode">此節是依 ${escapeHtml(getTranslationLabel(state.lastMeta.sourceVersion))} 的關鍵字結果展開。</p>`
-          : `<p class="result-mode">五個譯本同步呈現。</p>`;
+          ? `<p class="result-mode">此節由 ${escapeHtml(formatTranslationLabels(result.matchedVersions || state.lastMeta.sourceVersions || []))} 命中。</p>`
+          : `<p class="result-mode">六個譯本同步呈現。</p>`;
 
       return `
         <article class="result-card">
@@ -482,7 +577,7 @@ async function handleSearch(event) {
   state.error = "";
   setLoading(true);
   showLoadingCard();
-  setStatus("查詢中，正在整理五個譯本的內容...");
+  setStatus("查詢中，正在整理六個譯本的內容...");
 
   try {
     if (state.mode === "passage") {
@@ -492,12 +587,16 @@ async function handleSearch(event) {
         summary: `已完成經文定位：${query}`
       };
     } else {
-      const { results, resolvedVersion } = await searchKeyword(query);
+      const { results, searchPlan } = await searchKeyword(query);
       state.results = results;
       state.lastMeta = {
         mode: "keyword",
-        sourceVersion: resolvedVersion,
-        summary: `已完成關鍵字搜尋：${query}`
+        sourceLabel: searchPlan.sourceLabel,
+        sourceVersions: searchPlan.versions,
+        summary:
+          searchPlan.versions.length > 1
+            ? `已完成中文三譯本聯合搜尋：${query}`
+            : `已完成關鍵字搜尋：${query}`
       };
     }
 
