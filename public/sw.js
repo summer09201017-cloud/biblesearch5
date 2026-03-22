@@ -1,13 +1,13 @@
-const VERSION = "20260322b";
+const VERSION = "20260322c";
 const STATIC_CACHE = `bible-static-${VERSION}`;
 const API_CACHE = `bible-api-${VERSION}`;
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260322b",
-  "/app.js?v=20260322b",
-  "/pwa.js?v=20260322b",
-  "/manifest.webmanifest?v=20260322b",
+  "/styles.css?v=20260322c",
+  "/app.js?v=20260322c",
+  "/pwa.js?v=20260322c",
+  "/manifest.webmanifest?v=20260322c",
   "/offline.html",
   "/icons/icon.svg",
   "/icons/icon-192.png",
@@ -48,6 +48,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Navigation request failed with ${response.status}`);
+          }
+
           const copy = response.clone();
           caches.open(STATIC_CACHE).then((cache) => cache.put("/index.html", copy));
           return response;
@@ -75,16 +79,22 @@ async function cacheFirst(request, cacheName) {
   }
 
   const response = await fetch(request);
-  const cache = await caches.open(cacheName);
-  cache.put(request, response.clone());
+  if (response.ok) {
+    const cache = await caches.open(cacheName);
+    cache.put(request, response.clone());
+  }
+
   return response;
 }
 
 async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(cacheName);
-    cache.put(request, response.clone());
+    if (response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+
     return response;
   } catch {
     const cached = await caches.match(request, { ignoreSearch: false });
