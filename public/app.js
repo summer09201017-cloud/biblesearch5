@@ -1,7 +1,7 @@
 const TRANSLATIONS = [
   { id: "unv", label: "和合本", fullLabel: "和合本" },
   { id: "esv", label: "ESV", fullLabel: "English Standard Version" },
-  { id: "lcc", label: "呂振中", fullLabel: "呂振中譯本" },
+  { id: "lcc", label: "呂振中譯本", fullLabel: "呂振中譯本" },
   { id: "ncv", label: "新譯本", fullLabel: "新譯本" },
   { id: "asv", label: "ASV", fullLabel: "American Standard Version" },
   { id: "kjv", label: "KJV", fullLabel: "King James Version" }
@@ -20,14 +20,14 @@ const BIBLE_BOOK_ORDER = new Map([
 
 const MODE_COPY = {
   passage: {
-    placeholder: "例如：約 3:16-18",
-    helper: "輸入章節範圍，例如 `約 3:16-18`、`John 1`、`創 1:1-5`。",
-    examples: ["約 3:16-18", "John 1", "詩 23", "創 1:1-5"]
+    placeholder: "請輸入，例如：John 3:16-18",
+    helper: "可輸入 `John 3:16-18`、`John 1`、`詩篇 23`、`約 1:1-5`",
+    examples: ["John 3:16-18", "John 1", "詩篇 23", "約 1:1-5"]
   },
   keyword: {
-    placeholder: "例如：愛、恩典、love、faith",
-    helper: "中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，再把同一節的六個譯本一起列出。",
-    examples: ["愛", "恩典", "love", "\"eternal life\""]
+    placeholder: "請輸入關鍵字，例如：love、faith",
+    helper: "可輸入中文或英文關鍵字，也可用引號查片語，例如 \"eternal life\"。",
+    examples: ["神", "永生", "love", "\"eternal life\""]
   }
 };
 
@@ -37,7 +37,9 @@ const state = {
   results: [],
   isLoading: false,
   error: "",
-  lastMeta: null
+  lastMeta: null,
+  selectedResultKeys: new Set(),
+  visibleTranslations: new Set(TRANSLATIONS.map((translation) => translation.id))
 };
 
 const passageCache = new Map();
@@ -45,9 +47,11 @@ const decoder = document.createElement("textarea");
 
 const dom = {
   copyrightYear: document.getElementById("copyright-year"),
+  copyVersesButton: document.getElementById("copy-verses-button"),
   exampleChips: document.getElementById("example-chips"),
   keywordControls: document.getElementById("keyword-controls"),
   keywordVersion: document.getElementById("keyword-version"),
+  lineShareButton: document.getElementById("line-share-button"),
   modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
   modeDescription: document.getElementById("mode-description"),
   queryInput: document.getElementById("query-input"),
@@ -57,8 +61,25 @@ const dom = {
   shareButton: document.getElementById("share-button"),
   statusPills: document.getElementById("status-pills"),
   statusText: document.getElementById("status-text"),
-  submitButton: document.getElementById("submit-button")
+  submitButton: document.getElementById("submit-button"),
+  translationToggles: document.getElementById("translation-toggles")
 };
+
+const KEYWORD_DEFAULT_LIMIT = 20;
+const KEYWORD_MULTI_VERSION_FETCH_MULTIPLIER = 3;
+const KEYWORD_MULTI_VERSION_FETCH_CAP = 600;
+const KEYWORD_MAX_EXPANDED_RESULTS = 40;
+const REQUEST_TIMEOUT_MS = 15000;
+let activeKeywordSearchToken = 0;
+
+function parseKeywordLimit(value) {
+  const numeric = Math.trunc(Number(value));
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return KEYWORD_DEFAULT_LIMIT;
+  }
+
+  return numeric;
+}
 
 function updateMode(mode, options = {}) {
   state.mode = mode;
@@ -202,8 +223,23 @@ async function requestJson(pathname, params) {
     }
   });
 
-  const response = await fetch(url);
-  const json = await response.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response;
+  let json;
+
+  try {
+    response = await fetch(url, { signal: controller.signal });
+    json = await response.json();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("查詢逾時，請縮小條件或稍後再試。");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok || json.status === "error") {
     throw new Error(json.message || "查詢服務暫時無法使用。");
@@ -276,8 +312,45 @@ function getTranslationLabel(versionId) {
   return TRANSLATIONS.find((item) => item.id === versionId)?.label || versionId;
 }
 
+function getTranslationFullLabel(versionId) {
+  return TRANSLATIONS.find((item) => item.id === versionId)?.fullLabel || versionId;
+}
+
+function makeResultKey(bookEn, chapter, verse) {
+  return `${bookEn}-${chapter}-${verse}`;
+}
+
 function formatTranslationLabels(versionIds) {
   return versionIds.map((versionId) => getTranslationLabel(versionId)).join(" / ");
+}
+
+function getVisibleTranslations() {
+  return TRANSLATIONS.filter((translation) => state.visibleTranslations.has(translation.id));
+}
+
+function renderTranslationToggles() {
+  dom.translationToggles.innerHTML = TRANSLATIONS
+    .map(
+      (translation) => `
+        <label class="translation-toggle">
+          <input
+            class="translation-toggle-input"
+            type="checkbox"
+            value="${translation.id}"
+            ${state.visibleTranslations.has(translation.id) ? "checked" : ""}
+          />
+          <span class="translation-toggle-label">${escapeHtml(translation.label)}</span>
+        </label>
+      `
+    )
+    .join("");
+}
+
+function updateActionButtons() {
+  if (dom.copyVersesButton) {
+    dom.copyVersesButton.disabled =
+      state.mode !== "keyword" || state.selectedResultKeys.size === 0 || !getVisibleTranslations().length;
+  }
 }
 
 function compareBibleReference(left, right) {
@@ -336,6 +409,7 @@ function mergePassageResults(recordsByVersion) {
       if (!verseMap.has(row.key)) {
         order.push(row.key);
         verseMap.set(row.key, {
+          key: row.key,
           bookEn: row.bookEn,
           bookZh: row.bookZh,
           chapter: row.chapter,
@@ -366,16 +440,30 @@ async function searchPassage(query) {
   return mergePassageResults(recordsByVersion);
 }
 
-async function searchKeyword(query) {
+async function searchKeyword(query, options = {}) {
+  const forceAll = Boolean(options.forceAll);
   const selectedVersion = dom.keywordVersion.value;
   const searchPlan = resolveKeywordSearchPlan(query, selectedVersion);
-  const limit = dom.resultLimit.value;
-  const searchLimit = searchPlan.versions.length > 1 ? "all" : limit;
+  const limitValue = dom.resultLimit.value;
+  const requestedAll = forceAll || limitValue === "all";
+  const visibleLimit = requestedAll
+    ? (forceAll ? Number.POSITIVE_INFINITY : KEYWORD_DEFAULT_LIMIT)
+    : parseKeywordLimit(limitValue);
+  const perVersionFetchLimit = requestedAll
+    ? forceAll
+      ? "all"
+      : Math.max(visibleLimit, visibleLimit * KEYWORD_MULTI_VERSION_FETCH_MULTIPLIER)
+    : searchPlan.versions.length > 1
+      ? Math.min(
+          KEYWORD_MULTI_VERSION_FETCH_CAP,
+          Math.max(visibleLimit, visibleLimit * KEYWORD_MULTI_VERSION_FETCH_MULTIPLIER)
+        )
+      : visibleLimit;
   const hitsByVersion = new Map();
 
   await Promise.all(
     searchPlan.versions.map(async (version) => {
-      hitsByVersion.set(version, await fetchKeywordHits(version, query, searchLimit));
+      hitsByVersion.set(version, await fetchKeywordHits(version, query, perVersionFetchLimit));
     })
   );
 
@@ -413,22 +501,32 @@ async function searchKeyword(query) {
   mergedHits.sort(compareBibleReference);
 
   const visibleHits =
-    limit === "all"
+    requestedAll && forceAll
       ? mergedHits
-      : mergedHits.slice(0, Math.max(1, Math.trunc(Number(limit))));
+      : mergedHits.slice(0, visibleLimit);
 
   if (!visibleHits.length) {
     return {
       results: [],
-      searchPlan
+      searchPlan,
+      meta: {
+        visibleLimit,
+        totalMergedHits: 0,
+        wasCapped: false,
+        partialExpanded: false,
+        requestedAll,
+        pendingFullLoad: requestedAll && !forceAll
+      }
     };
   }
 
   const chapterRequests = new Map();
+  const visibleTranslations = getVisibleTranslations();
+  const hitsForExpansion = visibleHits.slice(0, KEYWORD_MAX_EXPANDED_RESULTS);
 
-  for (const hit of visibleHits) {
+  for (const hit of hitsForExpansion) {
     const reference = `${hit.bookZh} ${hit.chapter}`;
-    for (const translation of TRANSLATIONS) {
+    for (const translation of visibleTranslations) {
       const key = `${translation.id}|${reference}`;
       if (!chapterRequests.has(key)) {
         chapterRequests.set(key, {
@@ -456,7 +554,7 @@ async function searchKeyword(query) {
     const reference = `${hit.bookZh} ${hit.chapter}`;
     const texts = {};
 
-    for (const translation of TRANSLATIONS) {
+    for (const translation of visibleTranslations) {
       texts[translation.id] =
         chapterData.get(`${translation.id}|${reference}`)?.get(hit.verse) || "";
     }
@@ -467,7 +565,8 @@ async function searchKeyword(query) {
       }
     }
 
-    return {
+      return {
+      key: makeResultKey(hit.bookEn, hit.chapter, hit.verse),
       bookEn: hit.bookEn,
       bookZh: hit.bookZh,
       chapter: hit.chapter,
@@ -479,7 +578,15 @@ async function searchKeyword(query) {
 
   return {
     results,
-    searchPlan
+    searchPlan,
+    meta: {
+      visibleLimit,
+      totalMergedHits: mergedHits.length,
+      wasCapped: mergedHits.length > visibleLimit,
+      partialExpanded: visibleHits.length > hitsForExpansion.length,
+      requestedAll,
+      pendingFullLoad: requestedAll && !forceAll
+    }
   };
 }
 
@@ -495,7 +602,7 @@ function renderStatusFromMeta() {
   ];
 
   if (state.lastMeta.mode === "keyword") {
-    pills.push(`搜尋依據：${state.lastMeta.sourceLabel}`);
+    pills.push(`來源 ${state.lastMeta.sourceLabel}`);
   }
 
   setStatus(state.lastMeta.summary, pills);
@@ -505,18 +612,20 @@ function renderResults() {
   if (!state.results.length) {
     dom.results.innerHTML = `
       <section class="empty-state">
-        <h2>沒有找到結果</h2>
+        <h2>目前沒有符合結果</h2>
         <p>可以試試別的卷名寫法、縮小章節範圍，或換一個關鍵字來源譯本。</p>
       </section>
     `;
+    updateActionButtons();
     return;
   }
 
   const highlightQuery = state.lastMeta?.mode === "keyword" ? state.query : "";
+  const visibleTranslations = getVisibleTranslations();
 
   dom.results.innerHTML = state.results
     .map((result) => {
-      const translationPanels = TRANSLATIONS.map((translation) => {
+      const translationPanels = visibleTranslations.map((translation) => {
         const text = result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。";
         return `
           <article class="translation-panel">
@@ -531,31 +640,57 @@ function renderResults() {
 
       const keywordMeta =
         state.lastMeta?.mode === "keyword"
-          ? `<p class="result-mode">此節由 ${escapeHtml(formatTranslationLabels(result.matchedVersions || state.lastMeta.sourceVersions || []))} 命中。</p>`
-          : `<p class="result-mode">六個譯本同步呈現。</p>`;
+          ? `<p class="result-mode">甇斤???${escapeHtml(formatTranslationLabels(result.matchedVersions || state.lastMeta.sourceVersions || []))} ?賭葉??/p>`
+          : `<p class="result-mode">依你勾選的譯本同步呈現。</p>`;
+
+      const selectionControl =
+        state.lastMeta?.mode === "keyword"
+          ? `
+            <label class="result-selector">
+              <input
+                class="result-selector-input"
+                type="checkbox"
+                data-result-key="${escapeHtml(result.key)}"
+                ${state.selectedResultKeys.has(result.key) ? "checked" : ""}
+              />
+              <span>選取複製</span>
+            </label>
+          `
+          : "";
+
+      const translationContent = translationPanels || `
+        <div class="translation-empty">
+          請先勾選至少一個要顯示的聖經譯本。        </div>
+      `;
 
       return `
         <article class="result-card">
           <header class="result-header">
-            <div class="result-title">
-              <h3>${escapeHtml(`${result.bookZh} ${result.chapter}:${result.verse}`)}</h3>
-              <span class="pill">${escapeHtml(result.bookEn)}</span>
+            <div class="result-header-top">
+              <div class="result-title">
+                <h3>${escapeHtml(`${result.bookZh} ${result.chapter}:${result.verse}`)}</h3>
+                <span class="pill">${escapeHtml(result.bookEn)}</span>
+              </div>
+              ${selectionControl}
             </div>
             ${keywordMeta}
           </header>
           <div class="translation-grid">
-            ${translationPanels}
+            ${translationContent}
           </div>
         </article>
       `;
     })
     .join("");
+
+  updateActionButtons();
 }
 
 function syncUrl() {
   const params = new URLSearchParams();
   params.set("mode", state.mode);
   params.set("q", state.query);
+  params.set("shown", [...state.visibleTranslations].join(","));
 
   if (state.mode === "keyword") {
     params.set("version", dom.keywordVersion.value);
@@ -566,6 +701,47 @@ function syncUrl() {
   window.history.replaceState({}, "", nextUrl);
 }
 
+async function loadKeywordResultsInBackground(query, searchToken) {
+  try {
+    const { results, searchPlan } = await searchKeyword(query, { forceAll: true });
+    if (
+      searchToken !== activeKeywordSearchToken ||
+      state.mode !== "keyword" ||
+      state.query !== query ||
+      !["all", "20"].includes(dom.resultLimit.value)
+    ) {
+      return;
+    }
+
+    state.results = results;
+    state.lastMeta = {
+      mode: "keyword",
+      sourceLabel: searchPlan.sourceLabel,
+      sourceVersions: searchPlan.versions,
+      summary:
+        searchPlan.versions.length > 1
+          ? `已完成中文三譯本聯合搜尋：${query}（已載入全部 ${results.length} 筆）`
+          : `已完成關鍵字搜尋：${query}（已載入全部 ${results.length} 筆）`
+    };
+
+    renderStatusFromMeta();
+    renderResults();
+    syncUrl();
+  } catch (error) {
+    if (
+      searchToken !== activeKeywordSearchToken ||
+      state.mode !== "keyword" ||
+      state.query !== query ||
+      !["all", "20"].includes(dom.resultLimit.value)
+    ) {
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    setStatus(`已先顯示前 ${KEYWORD_DEFAULT_LIMIT} 筆；完整載入失敗：${message}`, ["可先縮小關鍵字範圍"]);
+  }
+}
+
 async function handleSearch(event) {
   event?.preventDefault();
   const query = dom.queryInput.value.trim();
@@ -573,21 +749,39 @@ async function handleSearch(event) {
     return;
   }
 
+  const searchToken = ++activeKeywordSearchToken;
   state.query = query;
   state.error = "";
+  state.selectedResultKeys = new Set();
   setLoading(true);
   showLoadingCard();
+  updateActionButtons();
   setStatus("查詢中，正在整理六個譯本的內容...");
 
   try {
     if (state.mode === "passage") {
       state.results = await searchPassage(query);
+      if (searchToken !== activeKeywordSearchToken) {
+        return;
+      }
       state.lastMeta = {
         mode: "passage",
         summary: `已完成經文定位：${query}`
       };
     } else {
-      const { results, searchPlan } = await searchKeyword(query);
+      const { results, searchPlan, meta } = await searchKeyword(query);
+      if (searchToken !== activeKeywordSearchToken) {
+        return;
+      }
+
+      const shouldAutoLoadAll = dom.resultLimit.value === "all" || dom.resultLimit.value === "20";
+      const pendingNote = shouldAutoLoadAll
+        ? `（先顯示前 ${meta.visibleLimit} 筆，背景載入全部中）`
+        : "";
+      const speedNote = !meta?.requestedAll && meta?.wasCapped
+        ? `（為了速度先顯示前 ${meta.visibleLimit} 筆）`
+        : "";
+
       state.results = results;
       state.lastMeta = {
         mode: "keyword",
@@ -595,9 +789,17 @@ async function handleSearch(event) {
         sourceVersions: searchPlan.versions,
         summary:
           searchPlan.versions.length > 1
-            ? `已完成中文三譯本聯合搜尋：${query}`
-            : `已完成關鍵字搜尋：${query}`
+            ? `已完成中文三譯本聯合搜尋：${query}${pendingNote}${speedNote}`
+            : `已完成關鍵字搜尋：${query}${pendingNote}${speedNote}`
       };
+
+      if (shouldAutoLoadAll) {
+        void loadKeywordResultsInBackground(query, searchToken);
+      }
+    }
+
+    if (searchToken !== activeKeywordSearchToken) {
+      return;
     }
 
     renderStatusFromMeta();
@@ -616,11 +818,89 @@ async function handleSearch(event) {
 }
 
 async function copyShareLink() {
+  const shareData = {
+    title: "多譯本聖經查詢",
+    text: state.query ? `分享查詢：${state.query}` : "分享多譯本聖經查詢網站",
+    url: window.location.href
+  };
+
   try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      setStatus("已開啟分享面板。", ["可直接傳給其他人"]);
+      return;
+    }
+
     await navigator.clipboard.writeText(window.location.href);
     setStatus("已複製目前查詢網址。", ["可直接貼給別人打開"]);
   } catch {
-    setStatus("無法直接寫入剪貼簿，網址已保留在瀏覽器列。");
+    setStatus("無法直接分享，網址已保留在瀏覽器列。");
+  }
+}
+
+function shareToLine() {
+  const shareText = state.query ? `多譯本聖經查詢：${state.query}` : "多譯本聖經查詢";
+  const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(`${shareText}\n${window.location.href}`)}`;
+  const opened = window.open(lineUrl, "_blank", "noopener,noreferrer");
+
+  if (!opened) {
+    window.location.href = lineUrl;
+  }
+
+  setStatus("已開啟 Line 分享。", ["可直接傳送目前查詢"]);
+}
+
+function buildCopyVersesPayload() {
+  if (state.mode !== "keyword") {
+    return null;
+  }
+
+  const selectedResults = state.results.filter((result) => state.selectedResultKeys.has(result.key));
+  if (!selectedResults.length) {
+    return null;
+  }
+
+  const visibleTranslations = getVisibleTranslations();
+  if (!visibleTranslations.length) {
+    return null;
+  }
+
+  const text = selectedResults
+    .map((result) => {
+      const lines = [`${result.bookZh} ${result.chapter}:${result.verse}`];
+
+      for (const translation of visibleTranslations) {
+        lines.push(getTranslationFullLabel(translation.id));
+        lines.push(result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。");
+      }
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+
+  return {
+    count: selectedResults.length,
+    text,
+    visibleVersions: visibleTranslations.map((translation) => translation.id)
+  };
+}
+
+async function copySelectedVerses() {
+  const payload = buildCopyVersesPayload();
+
+  if (!payload) {
+    setStatus("請先在關鍵字搜尋結果勾選要複製的經文。");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(payload.text);
+    setStatus("已複製勾選的經文。", [
+      `共 ${payload.count} 節`, 
+      `譯本 ${formatTranslationLabels(payload.visibleVersions)}`
+    ]);
+  } catch {
+    setStatus("無法直接複製，請確認瀏覽器允許剪貼簿權限。");
   }
 }
 
@@ -630,6 +910,7 @@ function hydrateFromUrl() {
   const query = params.get("q") || "";
   const version = params.get("version");
   const limit = params.get("limit");
+  const shown = params.get("shown");
 
   if (mode === "keyword" || mode === "passage") {
     updateMode(mode, { keepInput: true });
@@ -645,6 +926,19 @@ function hydrateFromUrl() {
     dom.resultLimit.value = limit;
   }
 
+  if (shown) {
+    const visibleTranslations = shown
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => TRANSLATIONS.some((translation) => translation.id === value));
+
+    if (visibleTranslations.length) {
+      state.visibleTranslations = new Set(visibleTranslations);
+    }
+  }
+
+  renderTranslationToggles();
+
   if (query) {
     dom.queryInput.value = query;
     handleSearch();
@@ -659,11 +953,14 @@ function bindEvents() {
   dom.modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       updateMode(button.dataset.mode);
+      activeKeywordSearchToken += 1;
       showEmptyState();
       setStatus("等待輸入查詢條件。");
-      dom.shareButton.hidden = true;
       state.results = [];
       state.lastMeta = null;
+      state.selectedResultKeys = new Set();
+      updateActionButtons();
+      syncUrl();
     });
   });
 
@@ -678,12 +975,62 @@ function bindEvents() {
   });
 
   dom.shareButton.addEventListener("click", copyShareLink);
+  dom.lineShareButton.addEventListener("click", shareToLine);
+  dom.copyVersesButton.addEventListener("click", copySelectedVerses);
+
+  dom.translationToggles.addEventListener("change", (event) => {
+    const input = event.target.closest(".translation-toggle-input");
+    if (!input) {
+      return;
+    }
+
+    const checkedIds = Array.from(
+      dom.translationToggles.querySelectorAll(".translation-toggle-input:checked"),
+      (checkbox) => checkbox.value
+    );
+
+    if (!checkedIds.length) {
+      input.checked = true;
+      setStatus("至少要勾選一個聖經譯本。");
+      return;
+    }
+
+    state.visibleTranslations = new Set(checkedIds);
+    renderResults();
+    syncUrl();
+  });
+
+  dom.results.addEventListener("change", (event) => {
+    const input = event.target.closest(".result-selector-input");
+    if (!input) {
+      return;
+    }
+
+    const resultKey = input.dataset.resultKey || "";
+    if (!resultKey) {
+      return;
+    }
+
+    if (input.checked) {
+      state.selectedResultKeys.add(resultKey);
+    } else {
+      state.selectedResultKeys.delete(resultKey);
+    }
+
+    updateActionButtons();
+  });
 }
 
 function init() {
   dom.copyrightYear.textContent = `© ${new Date().getFullYear()} 多譯本聖經查詢介面`;
+  dom.shareButton.hidden = false;
+  renderTranslationToggles();
   bindEvents();
   hydrateFromUrl();
+  updateActionButtons();
 }
 
 init();
+
+
+

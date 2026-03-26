@@ -15,10 +15,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="聖經查詢" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260322c" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260323a" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/styles.css?v=20260322c" />
+    <link rel="stylesheet" href="/styles.css?v=20260323a" />
   </head>
   <body>
     <div class="shell">
@@ -89,12 +89,17 @@
               <label class="field">
                 <span>載入筆數</span>
                 <select id="result-limit" class="select-field">
-                  <option value="all" selected>全部</option>
+                  <option value="all">全部</option>
                   <option value="10">10</option>
-                  <option value="20">20</option>
+                  <option value="20" selected>20</option>
                   <option value="40">40</option>
                 </select>
               </label>
+            </div>
+
+            <div class="translation-controls" aria-label="顯示譯本">
+              <p class="field-legend">顯示譯本</p>
+              <div id="translation-toggles" class="translation-toggle-list"></div>
             </div>
           </form>
 
@@ -107,10 +112,16 @@
             </div>
 
             <div class="action-row">
-              <button id="share-button" class="secondary-button" type="button" hidden>
+              <button id="share-button" class="secondary-button" type="button">
                 分享查詢
               </button>
-              <button id="install-button" class="secondary-button" type="button" hidden>
+              <button id="line-share-button" class="secondary-button" type="button">
+                分享到 Line
+              </button>
+              <button id="copy-verses-button" class="secondary-button" type="button">
+                複製經文
+              </button>
+              <button id="install-button" class="secondary-button" type="button">
                 安裝 App
               </button>
             </div>
@@ -145,7 +156,7 @@
       </footer>
     </div>
 
-    <script type="module" src="/app.js?v=20260322c"></script>
-    <script type="module" src="/pwa.js?v=20260322c"></script>
+    <script type="module" src="/app.js?v=20260323a"></script>
+    <script type="module" src="/pwa.js?v=20260323a"></script>
   </body>
 </html>
