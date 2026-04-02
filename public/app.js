@@ -556,6 +556,45 @@ function updateActionButtons() {
     hasVisibleTranslations;
 
   dom.copyVersesButton.disabled = !canCopyKeywordResults && !canCopyPassageResults;
+  syncResultsFooterState();
+}
+
+function getResultsFooterCopyState(visibleTranslations = getVisibleTranslations()) {
+  const hasVisibleTranslations = visibleTranslations.length > 0;
+  const selectedCount = state.selectedResultKeys.size;
+
+  if (state.mode === "passage") {
+    return {
+      note: !hasVisibleTranslations
+        ? "請先勾選至少一個要顯示的譯本。"
+        : selectedCount
+          ? `已勾選 ${selectedCount} 節，可複製目前勾選的經節。`
+          : "請先勾選要複製的經節，再按下複製經文。",
+      disabled: !hasVisibleTranslations || selectedCount === 0
+    };
+  }
+
+  return {
+    note: !hasVisibleTranslations
+      ? "請先勾選至少一個要顯示的譯本。"
+      : selectedCount
+        ? `已勾選 ${selectedCount} 節，可複製目前勾選的結果。`
+        : "請先勾選要複製的經文，再按下複製經文。",
+    disabled: !hasVisibleTranslations || selectedCount === 0
+  };
+}
+
+function syncResultsFooterState() {
+  const footerNote = dom.results.querySelector("[data-results-copy-note]");
+  const footerButton = dom.results.querySelector('[data-results-action="copy-verses"]');
+
+  if (!footerNote || !footerButton) {
+    return;
+  }
+
+  const footerState = getResultsFooterCopyState();
+  footerNote.textContent = footerState.note;
+  footerButton.disabled = footerState.disabled;
 }
 
 function compareBibleReference(left, right) {
@@ -818,8 +857,7 @@ function renderResultsFooter(visibleTranslations) {
       state.results[0].chapter,
       state.results[0].bookZh
     );
-    const hasVisibleTranslations = visibleTranslations.length > 0;
-    const selectedCount = state.selectedResultKeys.size;
+    const footerCopyState = getResultsFooterCopyState(visibleTranslations);
 
     const previousReference = navigation?.previous
       ? formatChapterReference(navigation.previous.bookZh, navigation.previous.chapter)
@@ -855,20 +893,14 @@ function renderResultsFooter(visibleTranslations) {
           </button>
         </div>
         <div class="results-footer-actions">
-          <p class="results-footer-note">
-            ${escapeHtml(
-              !hasVisibleTranslations
-                ? "請先勾選至少一個要顯示的譯本。"
-                : selectedCount
-                  ? `已勾選 ${selectedCount} 節，可複製目前勾選的經節。`
-                  : "請先勾選要複製的經節，再按下複製經文。"
-            )}
+          <p class="results-footer-note" data-results-copy-note>
+            ${escapeHtml(footerCopyState.note)}
           </p>
           <button
             class="secondary-button"
             type="button"
             data-results-action="copy-verses"
-            ${hasVisibleTranslations && selectedCount > 0 ? "" : "disabled"}
+            ${footerCopyState.disabled ? "disabled" : ""}
           >
             複製經文
           </button>
@@ -877,26 +909,20 @@ function renderResultsFooter(visibleTranslations) {
     `;
   }
 
-  const hasVisibleTranslations = visibleTranslations.length > 0;
-  const selectedCount = state.selectedResultKeys.size;
-  const note = !hasVisibleTranslations
-    ? "請先勾選至少一個要顯示的譯本。"
-    : selectedCount
-      ? `已勾選 ${selectedCount} 節，可複製目前勾選的結果。`
-      : "請先勾選要複製的經文，再按下複製經文。";
+  const footerCopyState = getResultsFooterCopyState(visibleTranslations);
 
   return `
     <section class="results-footer">
       <div class="results-footer-actions">
         <p class="results-footer-label">關鍵字結果操作</p>
-        <p class="results-footer-note">${escapeHtml(note)}</p>
+        <p class="results-footer-note" data-results-copy-note>${escapeHtml(footerCopyState.note)}</p>
       </div>
       <div class="results-footer-actions">
         <button
           class="secondary-button"
           type="button"
           data-results-action="copy-verses"
-          ${hasVisibleTranslations && selectedCount > 0 ? "" : "disabled"}
+          ${footerCopyState.disabled ? "disabled" : ""}
         >
           複製經文
         </button>
