@@ -7,27 +7,88 @@ const TRANSLATIONS = [
   { id: "kjv", label: "KJV", fullLabel: "King James Version" }
 ];
 
+const BOOKS = [
+  { engs: "Gen", zh: "創", chapters: 50 },
+  { engs: "Exod", zh: "出", chapters: 40 },
+  { engs: "Lev", zh: "利", chapters: 27 },
+  { engs: "Num", zh: "民", chapters: 36 },
+  { engs: "Deut", zh: "申", chapters: 34 },
+  { engs: "Josh", zh: "書", chapters: 24 },
+  { engs: "Judg", zh: "士", chapters: 21 },
+  { engs: "Ruth", zh: "得", chapters: 4 },
+  { engs: "1Sam", zh: "撒上", chapters: 31 },
+  { engs: "2Sam", zh: "撒下", chapters: 24 },
+  { engs: "1Kgs", zh: "王上", chapters: 22 },
+  { engs: "2Kgs", zh: "王下", chapters: 25 },
+  { engs: "1Chr", zh: "代上", chapters: 29 },
+  { engs: "2Chr", zh: "代下", chapters: 36 },
+  { engs: "Ezra", zh: "拉", chapters: 10 },
+  { engs: "Neh", zh: "尼", chapters: 13 },
+  { engs: "Esth", zh: "斯", chapters: 10 },
+  { engs: "Job", zh: "伯", chapters: 42 },
+  { engs: "Ps", zh: "詩", chapters: 150 },
+  { engs: "Prov", zh: "箴", chapters: 31 },
+  { engs: "Eccl", zh: "傳", chapters: 12 },
+  { engs: "Song", zh: "歌", chapters: 8 },
+  { engs: "Isa", zh: "賽", chapters: 66 },
+  { engs: "Jer", zh: "耶", chapters: 52 },
+  { engs: "Lam", zh: "哀", chapters: 5 },
+  { engs: "Ezek", zh: "結", chapters: 48 },
+  { engs: "Dan", zh: "但", chapters: 12 },
+  { engs: "Hos", zh: "何", chapters: 14 },
+  { engs: "Joel", zh: "珥", chapters: 3 },
+  { engs: "Amos", zh: "摩", chapters: 9 },
+  { engs: "Obad", zh: "俄", chapters: 1 },
+  { engs: "Jonah", zh: "拿", chapters: 4 },
+  { engs: "Mic", zh: "彌", chapters: 7 },
+  { engs: "Nah", zh: "鴻", chapters: 3 },
+  { engs: "Hab", zh: "哈", chapters: 3 },
+  { engs: "Zeph", zh: "番", chapters: 3 },
+  { engs: "Hag", zh: "該", chapters: 2 },
+  { engs: "Zech", zh: "亞", chapters: 14 },
+  { engs: "Mal", zh: "瑪", chapters: 4 },
+  { engs: "Matt", zh: "太", chapters: 28 },
+  { engs: "Mark", zh: "可", chapters: 16 },
+  { engs: "Luke", zh: "路", chapters: 24 },
+  { engs: "John", zh: "約", chapters: 21 },
+  { engs: "Acts", zh: "徒", chapters: 28 },
+  { engs: "Rom", zh: "羅", chapters: 16 },
+  { engs: "1Cor", zh: "林前", chapters: 16 },
+  { engs: "2Cor", zh: "林後", chapters: 13 },
+  { engs: "Gal", zh: "加", chapters: 6 },
+  { engs: "Eph", zh: "弗", chapters: 6 },
+  { engs: "Phil", zh: "腓", chapters: 4 },
+  { engs: "Col", zh: "西", chapters: 4 },
+  { engs: "1Thess", zh: "帖前", chapters: 5 },
+  { engs: "2Thess", zh: "帖後", chapters: 3 },
+  { engs: "1Tim", zh: "提前", chapters: 6 },
+  { engs: "2Tim", zh: "提後", chapters: 4 },
+  { engs: "Titus", zh: "多", chapters: 3 },
+  { engs: "Phlm", zh: "門", chapters: 1 },
+  { engs: "Heb", zh: "來", chapters: 13 },
+  { engs: "Jas", zh: "雅", chapters: 5 },
+  { engs: "1Pet", zh: "彼前", chapters: 5 },
+  { engs: "2Pet", zh: "彼後", chapters: 3 },
+  { engs: "1John", zh: "約一", chapters: 5 },
+  { engs: "2John", zh: "約二", chapters: 1 },
+  { engs: "3John", zh: "約三", chapters: 1 },
+  { engs: "Jude", zh: "猶", chapters: 1 },
+  { engs: "Rev", zh: "啟", chapters: 22 }
+];
+
+const BOOK_BY_ENGS = new Map(BOOKS.map((book) => [book.engs, book]));
 const CHINESE_SEARCH_VERSION_IDS = ["unv", "lcc", "ncv"];
-const BIBLE_BOOK_ORDER = new Map([
-  "Gen", "Exod", "Lev", "Num", "Deut", "Josh", "Judg", "Ruth",
-  "1Sam", "2Sam", "1Kgs", "2Kgs", "1Chr", "2Chr", "Ezra", "Neh", "Esth",
-  "Job", "Ps", "Prov", "Eccl", "Song", "Isa", "Jer", "Lam", "Ezek", "Dan",
-  "Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph",
-  "Hag", "Zech", "Mal", "Matt", "Mark", "Luke", "John", "Acts", "Rom",
-  "1Cor", "2Cor", "Gal", "Eph", "Phil", "Col", "1Thess", "2Thess",
-  "1Tim", "2Tim", "Titus", "Phlm", "Heb", "Jas", "1Pet", "2Pet",
-  "1John", "2John", "3John", "Jude", "Rev"
-].map((engs, index) => [engs, index]));
+const BIBLE_BOOK_ORDER = new Map(BOOKS.map((book, index) => [book.engs, index]));
 
 const MODE_COPY = {
   passage: {
     placeholder: "例如：約 3:16-18",
-    helper: "輸入章節範圍，例如 `約 3:16-18`、`John 1`、`創 1:1-5`。",
+    helper: "輸入章節範圍，例如 `約 3:16-18`、`John 1`、`創 1:1-5`，也可在下方切換上一章與下一章。",
     examples: ["約 3:16-18", "John 1", "詩 23", "創 1:1-5"]
   },
   keyword: {
     placeholder: "例如：愛、恩典、love、faith",
-    helper: "中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，再把同一節的多個譯本一起列出。",
+    helper: "輸入到第 2 個字後會自動搜尋。中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，再把同一節的多個譯本一起列出。",
     examples: ["愛", "恩典", "love", "\"eternal life\""]
   }
 };
@@ -36,6 +97,8 @@ const KEYWORD_DEFAULT_LIMIT = 20;
 const KEYWORD_MULTI_VERSION_FETCH_MULTIPLIER = 2;
 const KEYWORD_MULTI_VERSION_FETCH_CAP = 240;
 const KEYWORD_MAX_EXPANDED_RESULTS = 20;
+const KEYWORD_AUTO_SEARCH_MIN_LENGTH = 2;
+const KEYWORD_AUTO_SEARCH_DELAY_MS = 260;
 const REQUEST_TIMEOUT_MS = 15000;
 const BACKGROUND_FULL_LOAD_DELAY_MS = 400;
 
@@ -47,10 +110,13 @@ const state = {
   error: "",
   lastMeta: null,
   selectedResultKeys: new Set(),
-  visibleTranslations: new Set(TRANSLATIONS.map((translation) => translation.id))
+  visibleTranslations: new Set(TRANSLATIONS.map((translation) => translation.id)),
+  pendingFocusResultKey: ""
 };
 
 let activeKeywordSearchToken = 0;
+let keywordAutoSearchTimer = 0;
+let isComposingKeywordInput = false;
 
 const passageCache = new Map();
 const decoder = document.createElement("textarea");
@@ -88,7 +154,66 @@ function parseKeywordLimit(value) {
   return numeric;
 }
 
+function clearKeywordAutoSearchTimer() {
+  if (!keywordAutoSearchTimer) {
+    return;
+  }
+
+  window.clearTimeout(keywordAutoSearchTimer);
+  keywordAutoSearchTimer = 0;
+}
+
+function getSearchableQueryLength(query) {
+  return Array.from(String(query || "").trim()).length;
+}
+
+function resetKeywordAutoSearchState(query) {
+  activeKeywordSearchToken += 1;
+  state.query = query;
+  state.results = [];
+  state.error = "";
+  state.lastMeta = null;
+  state.selectedResultKeys = new Set();
+  state.pendingFocusResultKey = "";
+  setLoading(false);
+  showEmptyState();
+  updateActionButtons();
+  syncUrl();
+}
+
+function scheduleKeywordAutoSearch(options = {}) {
+  if (state.mode !== "keyword") {
+    return;
+  }
+
+  clearKeywordAutoSearchTimer();
+  const query = dom.queryInput.value.trim();
+
+  if (getSearchableQueryLength(query) < KEYWORD_AUTO_SEARCH_MIN_LENGTH) {
+    resetKeywordAutoSearchState(query);
+    setStatus(
+      query
+        ? `關鍵字輸入到 ${KEYWORD_AUTO_SEARCH_MIN_LENGTH} 個字後會自動查詢。`
+        : "請先輸入關鍵字。"
+    );
+    return;
+  }
+
+  const runSearch = () => {
+    keywordAutoSearchTimer = 0;
+    void handleSearch();
+  };
+
+  if (options.immediate) {
+    runSearch();
+    return;
+  }
+
+  keywordAutoSearchTimer = window.setTimeout(runSearch, KEYWORD_AUTO_SEARCH_DELAY_MS);
+}
+
 function updateMode(mode, options = {}) {
+  clearKeywordAutoSearchTimer();
   state.mode = mode;
   const copy = MODE_COPY[mode];
   dom.queryInput.placeholder = copy.placeholder;
@@ -152,7 +277,7 @@ function showEmptyState() {
   dom.results.innerHTML = `
     <section class="empty-state">
       <h2>輸入經文或關鍵字開始查詢</h2>
-      <p>經文定位適合直接查章節，關鍵字搜尋適合先找命中的節，再對照多個譯本。</p>
+      <p>經文閱讀適合直接查章節，關鍵字搜尋適合先找命中的節，再對照多個譯本。</p>
     </section>
   `;
 }
@@ -332,6 +457,71 @@ function formatTranslationLabels(versionIds) {
   return versionIds.map((versionId) => getTranslationLabel(versionId)).join(" / ");
 }
 
+function formatVerseReference(result) {
+  return `${result.bookZh} ${result.chapter}:${result.verse}`;
+}
+
+function formatChapterReference(bookZh, chapter) {
+  return `${bookZh} ${chapter}`;
+}
+
+function buildPassageHref(reference) {
+  const params = new URLSearchParams();
+  params.set("mode", "passage");
+  params.set("q", reference);
+  params.set("shown", [...state.visibleTranslations].join(","));
+  return `${window.location.pathname}?${params.toString()}`;
+}
+
+function getBookNavigation(bookEn, chapter, fallbackBookZh = "") {
+  const currentIndex = BIBLE_BOOK_ORDER.get(bookEn);
+  const currentBook = BOOK_BY_ENGS.get(bookEn);
+
+  if (currentIndex === undefined || !currentBook) {
+    return null;
+  }
+
+  const current = {
+    bookEn,
+    bookZh: fallbackBookZh || currentBook.zh,
+    chapter
+  };
+
+  let previous = null;
+  if (chapter > 1) {
+    previous = {
+      bookEn,
+      bookZh: current.bookZh,
+      chapter: chapter - 1
+    };
+  } else if (currentIndex > 0) {
+    const previousBook = BOOKS[currentIndex - 1];
+    previous = {
+      bookEn: previousBook.engs,
+      bookZh: previousBook.zh,
+      chapter: previousBook.chapters
+    };
+  }
+
+  let next = null;
+  if (chapter < currentBook.chapters) {
+    next = {
+      bookEn,
+      bookZh: current.bookZh,
+      chapter: chapter + 1
+    };
+  } else if (currentIndex < BOOKS.length - 1) {
+    const nextBook = BOOKS[currentIndex + 1];
+    next = {
+      bookEn: nextBook.engs,
+      bookZh: nextBook.zh,
+      chapter: 1
+    };
+  }
+
+  return { current, previous, next };
+}
+
 function getVisibleTranslations() {
   return TRANSLATIONS.filter((translation) => state.visibleTranslations.has(translation.id));
 }
@@ -355,10 +545,17 @@ function renderTranslationToggles() {
 }
 
 function updateActionButtons() {
-  dom.copyVersesButton.disabled =
-    state.mode !== "keyword" ||
-    state.selectedResultKeys.size === 0 ||
-    !getVisibleTranslations().length;
+  const hasVisibleTranslations = getVisibleTranslations().length > 0;
+  const canCopyKeywordResults =
+    state.mode === "keyword" &&
+    state.selectedResultKeys.size > 0 &&
+    hasVisibleTranslations;
+  const canCopyPassageResults =
+    state.mode === "passage" &&
+    state.selectedResultKeys.size > 0 &&
+    hasVisibleTranslations;
+
+  dom.copyVersesButton.disabled = !canCopyKeywordResults && !canCopyPassageResults;
 }
 
 function compareBibleReference(left, right) {
@@ -599,7 +796,7 @@ function renderStatusFromMeta() {
   }
 
   const pills = [
-    state.lastMeta.mode === "passage" ? "經文定位" : "關鍵字搜尋",
+    state.lastMeta.mode === "passage" ? "經文閱讀" : "關鍵字搜尋",
     `顯示 ${state.results.length} 筆結果`
   ];
 
@@ -608,6 +805,104 @@ function renderStatusFromMeta() {
   }
 
   setStatus(state.lastMeta.summary, pills);
+}
+
+function renderResultsFooter(visibleTranslations) {
+  if (!state.lastMeta || !state.results.length) {
+    return "";
+  }
+
+  if (state.lastMeta.mode === "passage") {
+    const navigation = getBookNavigation(
+      state.results[0].bookEn,
+      state.results[0].chapter,
+      state.results[0].bookZh
+    );
+    const hasVisibleTranslations = visibleTranslations.length > 0;
+    const selectedCount = state.selectedResultKeys.size;
+
+    const previousReference = navigation?.previous
+      ? formatChapterReference(navigation.previous.bookZh, navigation.previous.chapter)
+      : "";
+    const nextReference = navigation?.next
+      ? formatChapterReference(navigation.next.bookZh, navigation.next.chapter)
+      : "";
+
+    return `
+      <section class="results-footer">
+        <div class="chapter-navigation">
+          <button
+            class="secondary-button"
+            type="button"
+            data-results-action="navigate-chapter"
+            data-chapter-reference="${escapeHtml(previousReference)}"
+            ${previousReference ? "" : "disabled"}
+          >
+            上一章
+          </button>
+          <div class="chapter-navigation-meta">
+            <p class="results-footer-label">經文閱讀導覽</p>
+            <strong>${escapeHtml(`${state.results[0].bookZh} ${state.results[0].chapter} 章`)}</strong>
+          </div>
+          <button
+            class="secondary-button"
+            type="button"
+            data-results-action="navigate-chapter"
+            data-chapter-reference="${escapeHtml(nextReference)}"
+            ${nextReference ? "" : "disabled"}
+          >
+            下一章
+          </button>
+        </div>
+        <div class="results-footer-actions">
+          <p class="results-footer-note">
+            ${escapeHtml(
+              !hasVisibleTranslations
+                ? "請先勾選至少一個要顯示的譯本。"
+                : selectedCount
+                  ? `已勾選 ${selectedCount} 節，可複製目前勾選的經節。`
+                  : "請先勾選要複製的經節，再按下複製經文。"
+            )}
+          </p>
+          <button
+            class="secondary-button"
+            type="button"
+            data-results-action="copy-verses"
+            ${hasVisibleTranslations && selectedCount > 0 ? "" : "disabled"}
+          >
+            複製經文
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  const hasVisibleTranslations = visibleTranslations.length > 0;
+  const selectedCount = state.selectedResultKeys.size;
+  const note = !hasVisibleTranslations
+    ? "請先勾選至少一個要顯示的譯本。"
+    : selectedCount
+      ? `已勾選 ${selectedCount} 節，可複製目前勾選的結果。`
+      : "請先勾選要複製的經文，再按下複製經文。";
+
+  return `
+    <section class="results-footer">
+      <div class="results-footer-actions">
+        <p class="results-footer-label">關鍵字結果操作</p>
+        <p class="results-footer-note">${escapeHtml(note)}</p>
+      </div>
+      <div class="results-footer-actions">
+        <button
+          class="secondary-button"
+          type="button"
+          data-results-action="copy-verses"
+          ${hasVisibleTranslations && selectedCount > 0 ? "" : "disabled"}
+        >
+          複製經文
+        </button>
+      </div>
+    </section>
+  `;
 }
 
 function renderResults() {
@@ -624,9 +919,27 @@ function renderResults() {
 
   const highlightQuery = state.lastMeta?.mode === "keyword" ? state.query : "";
   const visibleTranslations = getVisibleTranslations();
-
-  dom.results.innerHTML = state.results
+  const resultCards = state.results
     .map((result) => {
+      const verseReference = formatVerseReference(result);
+      const chapterReference = formatChapterReference(result.bookZh, result.chapter);
+      const passageHref = buildPassageHref(chapterReference);
+      const titleMarkup =
+        state.lastMeta?.mode === "keyword"
+          ? `
+            <h3>
+              <a
+                class="result-reference-link"
+                href="${escapeHtml(passageHref)}"
+                data-chapter-reference="${escapeHtml(chapterReference)}"
+                data-result-key="${escapeHtml(result.key)}"
+              >
+                ${escapeHtml(verseReference)}
+              </a>
+            </h3>
+          `
+          : `<h3>${escapeHtml(verseReference)}</h3>`;
+
       const translationPanels = visibleTranslations.map((translation) => {
         const text = result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。";
         return `
@@ -658,7 +971,17 @@ function renderResults() {
               <span>選取複製</span>
             </label>
           `
-          : "";
+          : `
+            <label class="result-selector result-selector-inline">
+              <input
+                class="result-selector-input"
+                type="checkbox"
+                data-result-key="${escapeHtml(result.key)}"
+                ${state.selectedResultKeys.has(result.key) ? "checked" : ""}
+              />
+              <span>勾選複製</span>
+            </label>
+          `;
 
       const translationContent = translationPanels || `
         <div class="translation-empty">
@@ -667,14 +990,18 @@ function renderResults() {
       `;
 
       return `
-        <article class="result-card">
+        <article
+          class="result-card${state.pendingFocusResultKey === result.key ? " is-focus-target" : ""}"
+          data-verse-key="${escapeHtml(result.key)}"
+        >
           <header class="result-header">
             <div class="result-header-top">
               <div class="result-title">
-                <h3>${escapeHtml(`${result.bookZh} ${result.chapter}:${result.verse}`)}</h3>
+                ${titleMarkup}
+                ${state.lastMeta?.mode === "passage" ? selectionControl : ""}
                 <span class="pill">${escapeHtml(result.bookEn)}</span>
               </div>
-              ${selectionControl}
+              ${state.lastMeta?.mode === "keyword" ? selectionControl : ""}
             </div>
             ${keywordMeta}
           </header>
@@ -686,7 +1013,30 @@ function renderResults() {
     })
     .join("");
 
+  dom.results.innerHTML = `${resultCards}${renderResultsFooter(visibleTranslations)}`;
   updateActionButtons();
+  focusPendingResult();
+}
+
+function focusPendingResult() {
+  if (!state.pendingFocusResultKey) {
+    return;
+  }
+
+  const targetKey = state.pendingFocusResultKey;
+  state.pendingFocusResultKey = "";
+
+  window.requestAnimationFrame(() => {
+    const target = dom.results.querySelector(`[data-verse-key="${targetKey}"]`);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      target.classList.remove("is-focus-target");
+    }, 2200);
+  });
 }
 
 function syncUrl() {
@@ -764,6 +1114,7 @@ async function loadKeywordResultsInBackground(query, searchToken) {
 
 async function handleSearch(event) {
   event?.preventDefault();
+  clearKeywordAutoSearchTimer();
   const query = dom.queryInput.value.trim();
   if (!query) {
     return;
@@ -789,7 +1140,7 @@ async function handleSearch(event) {
 
       state.lastMeta = {
         mode: "passage",
-        summary: `已完成經文定位：${query}`
+        summary: `已完成經文閱讀：${query}`
       };
     } else {
       const { results, searchPlan, meta } = await searchKeyword(query);
@@ -834,6 +1185,7 @@ async function handleSearch(event) {
     state.results = [];
     state.error = error instanceof Error ? error.message : String(error);
     state.lastMeta = null;
+    state.pendingFocusResultKey = "";
     setStatus("查詢失敗，請稍後再試。");
     showErrorCard(state.error);
   } finally {
@@ -874,7 +1226,54 @@ function shareToLine() {
   setStatus("已開啟 Line 分享。", ["可直接傳送目前查詢"]);
 }
 
-function buildCopyVersesPayload() {
+async function openPassageChapter(reference, options = {}) {
+  if (!reference) {
+    return;
+  }
+
+  updateMode("passage", { keepInput: true });
+  dom.queryInput.value = reference;
+  state.pendingFocusResultKey = options.focusResultKey || "";
+  await handleSearch();
+}
+
+function buildPassageCopyPayload() {
+  if (state.mode !== "passage" || !state.results.length) {
+    return null;
+  }
+
+  const selectedResults = state.results.filter((result) => state.selectedResultKeys.has(result.key));
+  if (!selectedResults.length) {
+    return null;
+  }
+
+  const visibleTranslations = getVisibleTranslations();
+  if (!visibleTranslations.length) {
+    return null;
+  }
+
+  const text = selectedResults
+    .map((result) => {
+      const lines = [formatVerseReference(result)];
+
+      for (const translation of visibleTranslations) {
+        lines.push(getTranslationFullLabel(translation.id));
+        lines.push(result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。");
+      }
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+
+  return {
+    count: selectedResults.length,
+    text,
+    visibleVersions: visibleTranslations.map((translation) => translation.id),
+    statusLabel: "已複製勾選的經節。"
+  };
+}
+
+function buildKeywordCopyPayload() {
   if (state.mode !== "keyword") {
     return null;
   }
@@ -905,21 +1304,32 @@ function buildCopyVersesPayload() {
   return {
     count: selectedResults.length,
     text,
-    visibleVersions: visibleTranslations.map((translation) => translation.id)
+    visibleVersions: visibleTranslations.map((translation) => translation.id),
+    statusLabel: "已複製勾選的經文。"
   };
 }
 
+function buildCopyPayload() {
+  return state.mode === "passage"
+    ? buildPassageCopyPayload()
+    : buildKeywordCopyPayload();
+}
+
 async function copySelectedVerses() {
-  const payload = buildCopyVersesPayload();
+  const payload = buildCopyPayload();
 
   if (!payload) {
-    setStatus("請先在關鍵字搜尋結果勾選要複製的經文。");
+    setStatus(
+      state.mode === "keyword"
+        ? "請先在關鍵字搜尋結果勾選要複製的經文。"
+        : "請先在經文閱讀結果勾選要複製的經節。"
+    );
     return;
   }
 
   try {
     await navigator.clipboard.writeText(payload.text);
-    setStatus("已複製勾選的經文。", [
+    setStatus(payload.statusLabel, [
       `共 ${payload.count} 節`,
       `譯本 ${formatTranslationLabels(payload.visibleVersions)}`
     ]);
@@ -974,6 +1384,40 @@ function hydrateFromUrl() {
 function bindEvents() {
   dom.searchForm.addEventListener("submit", handleSearch);
 
+  dom.queryInput.addEventListener("compositionstart", () => {
+    isComposingKeywordInput = true;
+    clearKeywordAutoSearchTimer();
+  });
+
+  dom.queryInput.addEventListener("compositionend", () => {
+    isComposingKeywordInput = false;
+    scheduleKeywordAutoSearch();
+  });
+
+  dom.queryInput.addEventListener("input", (event) => {
+    if (state.mode !== "keyword" || isComposingKeywordInput || event.isComposing) {
+      return;
+    }
+
+    scheduleKeywordAutoSearch();
+  });
+
+  dom.keywordVersion.addEventListener("change", () => {
+    if (state.mode !== "keyword") {
+      return;
+    }
+
+    scheduleKeywordAutoSearch({ immediate: true });
+  });
+
+  dom.resultLimit.addEventListener("change", () => {
+    if (state.mode !== "keyword") {
+      return;
+    }
+
+    scheduleKeywordAutoSearch({ immediate: true });
+  });
+
   dom.modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       updateMode(button.dataset.mode);
@@ -982,6 +1426,7 @@ function bindEvents() {
       state.results = [];
       state.lastMeta = null;
       state.selectedResultKeys = new Set();
+      state.pendingFocusResultKey = "";
       showEmptyState();
       setStatus("等待輸入查詢條件。");
       updateActionButtons();
@@ -1023,6 +1468,33 @@ function bindEvents() {
     state.visibleTranslations = new Set(checkedIds);
     renderResults();
     syncUrl();
+  });
+
+  dom.results.addEventListener("click", (event) => {
+    const chapterLink = event.target.closest(".result-reference-link");
+    if (chapterLink) {
+      event.preventDefault();
+      void openPassageChapter(chapterLink.dataset.chapterReference || "", {
+        focusResultKey: chapterLink.dataset.resultKey || ""
+      });
+      return;
+    }
+
+    const actionButton = event.target.closest("[data-results-action]");
+    if (!actionButton) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (actionButton.dataset.resultsAction === "copy-verses") {
+      void copySelectedVerses();
+      return;
+    }
+
+    if (actionButton.dataset.resultsAction === "navigate-chapter") {
+      void openPassageChapter(actionButton.dataset.chapterReference || "");
+    }
   });
 
   dom.results.addEventListener("change", (event) => {

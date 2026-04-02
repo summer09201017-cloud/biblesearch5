@@ -1,27 +1,46 @@
 const INSTALL_BUTTON = document.getElementById("install-button");
 let deferredInstallPrompt = null;
 
-function showInstallButton() {
-  if (INSTALL_BUTTON && deferredInstallPrompt) {
-    INSTALL_BUTTON.hidden = false;
-  }
+function isStandaloneMode() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
-function hideInstallButton() {
-  if (INSTALL_BUTTON) {
-    INSTALL_BUTTON.hidden = true;
-  }
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
-async function installApp() {
-  if (!deferredInstallPrompt) {
+function updateInstallButton() {
+  if (!INSTALL_BUTTON) {
     return;
   }
 
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  hideInstallButton();
+  INSTALL_BUTTON.hidden = false;
+  INSTALL_BUTTON.textContent = isStandaloneMode() ? "已安裝 App" : "安裝 App";
+}
+
+function showInstallInstructions() {
+  const message = isIosDevice()
+    ? "iPhone 或 iPad 請按瀏覽器的分享按鈕，再選「加入主畫面」。"
+    : "請按瀏覽器選單，再選「安裝 App」或「加入主畫面」。";
+
+  window.alert(message);
+}
+
+async function installApp() {
+  if (isStandaloneMode()) {
+    window.alert("這個裝置已安裝此 App。");
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    updateInstallButton();
+    return;
+  }
+
+  showInstallInstructions();
 }
 
 async function registerServiceWorker() {
@@ -30,7 +49,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("/sw.js?v=20260322c");
+    await navigator.serviceWorker.register("/sw.js?v=20260402b");
   } catch (error) {
     console.warn("Service worker registration failed:", error);
   }
@@ -39,14 +58,15 @@ async function registerServiceWorker() {
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  showInstallButton();
+  updateInstallButton();
 });
 
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
-  hideInstallButton();
+  updateInstallButton();
 });
 
 INSTALL_BUTTON?.addEventListener("click", installApp);
 
+updateInstallButton();
 registerServiceWorker();
