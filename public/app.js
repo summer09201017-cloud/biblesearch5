@@ -846,52 +846,64 @@ function renderStatusFromMeta() {
   setStatus(state.lastMeta.summary, pills);
 }
 
+function renderResultsTopNavigation() {
+  if (!state.lastMeta || !state.results.length || state.lastMeta.mode !== "passage") {
+    return "";
+  }
+
+  const navigation = getBookNavigation(
+    state.results[0].bookEn,
+    state.results[0].chapter,
+    state.results[0].bookZh
+  );
+
+  const previousReference = navigation?.previous
+    ? formatChapterReference(navigation.previous.bookZh, navigation.previous.chapter)
+    : "";
+  const nextReference = navigation?.next
+    ? formatChapterReference(navigation.next.bookZh, navigation.next.chapter)
+    : "";
+
+  return `
+    <section class="results-top-navigation">
+      <div class="chapter-navigation">
+        <button
+          class="secondary-button"
+          type="button"
+          data-results-action="navigate-chapter"
+          data-chapter-reference="${escapeHtml(previousReference)}"
+          ${previousReference ? "" : "disabled"}
+        >
+          上一章
+        </button>
+        <div class="chapter-navigation-meta">
+          <p class="results-footer-label">經文閱讀導覽</p>
+          <strong>${escapeHtml(`${state.results[0].bookZh} ${state.results[0].chapter} 章`)}</strong>
+        </div>
+        <button
+          class="secondary-button"
+          type="button"
+          data-results-action="navigate-chapter"
+          data-chapter-reference="${escapeHtml(nextReference)}"
+          ${nextReference ? "" : "disabled"}
+        >
+          下一章
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderResultsFooter(visibleTranslations) {
   if (!state.lastMeta || !state.results.length) {
     return "";
   }
 
   if (state.lastMeta.mode === "passage") {
-    const navigation = getBookNavigation(
-      state.results[0].bookEn,
-      state.results[0].chapter,
-      state.results[0].bookZh
-    );
     const footerCopyState = getResultsFooterCopyState(visibleTranslations);
-
-    const previousReference = navigation?.previous
-      ? formatChapterReference(navigation.previous.bookZh, navigation.previous.chapter)
-      : "";
-    const nextReference = navigation?.next
-      ? formatChapterReference(navigation.next.bookZh, navigation.next.chapter)
-      : "";
 
     return `
       <section class="results-footer">
-        <div class="chapter-navigation">
-          <button
-            class="secondary-button"
-            type="button"
-            data-results-action="navigate-chapter"
-            data-chapter-reference="${escapeHtml(previousReference)}"
-            ${previousReference ? "" : "disabled"}
-          >
-            上一章
-          </button>
-          <div class="chapter-navigation-meta">
-            <p class="results-footer-label">經文閱讀導覽</p>
-            <strong>${escapeHtml(`${state.results[0].bookZh} ${state.results[0].chapter} 章`)}</strong>
-          </div>
-          <button
-            class="secondary-button"
-            type="button"
-            data-results-action="navigate-chapter"
-            data-chapter-reference="${escapeHtml(nextReference)}"
-            ${nextReference ? "" : "disabled"}
-          >
-            下一章
-          </button>
-        </div>
         <div class="results-footer-actions">
           <p class="results-footer-note" data-results-copy-note>
             ${escapeHtml(footerCopyState.note)}
@@ -968,13 +980,28 @@ function renderResults() {
 
       const translationPanels = visibleTranslations.map((translation) => {
         const text = result.texts[translation.id] || "此譯本在目前資料來源中沒有對應節次。";
+        const verseContent = renderVerseText(text, highlightQuery);
+        const verseTextMarkup =
+          state.lastMeta?.mode === "keyword"
+            ? `
+              <a
+                class="verse-text-link result-reference-link"
+                href="${escapeHtml(passageHref)}"
+                data-chapter-reference="${escapeHtml(chapterReference)}"
+                data-result-key="${escapeHtml(result.key)}"
+              >
+                <span class="verse-text">${verseContent}</span>
+              </a>
+            `
+            : `<p class="verse-text">${verseContent}</p>`;
+
         return `
           <article class="translation-panel">
             <div class="translation-top">
               <span class="version-badge ${translation.id}">${escapeHtml(translation.label)}</span>
               <span class="translation-meta">${escapeHtml(translation.fullLabel)}</span>
             </div>
-            <p class="verse-text">${renderVerseText(text, highlightQuery)}</p>
+            ${verseTextMarkup}
           </article>
         `;
       }).join("");
@@ -1039,7 +1066,8 @@ function renderResults() {
     })
     .join("");
 
-  dom.results.innerHTML = `${resultCards}${renderResultsFooter(visibleTranslations)}`;
+  const topNavigation = renderResultsTopNavigation();
+  dom.results.innerHTML = `${topNavigation}${resultCards}${renderResultsFooter(visibleTranslations)}`;
   updateActionButtons();
   focusPendingResult();
 }
