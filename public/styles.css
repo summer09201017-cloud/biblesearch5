@@ -236,7 +236,7 @@ a {
 }
 
 #copy-verses-button,
-[data-results-action="copy-verses"] {
+.secondary-button[data-results-action="copy-verses"] {
   background: linear-gradient(135deg, #b63f3f, #8f2323);
   color: #fff8f8;
   border-color: rgba(124, 31, 31, 0.35);
@@ -245,8 +245,8 @@ a {
 
 #copy-verses-button:hover,
 #copy-verses-button:focus-visible,
-[data-results-action="copy-verses"]:hover,
-[data-results-action="copy-verses"]:focus-visible {
+.secondary-button[data-results-action="copy-verses"]:hover,
+.secondary-button[data-results-action="copy-verses"]:focus-visible {
   background: linear-gradient(135deg, #c14949, #9b2a2a);
 }
 
