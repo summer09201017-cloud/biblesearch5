@@ -900,10 +900,45 @@ function renderResultsFooter(visibleTranslations) {
   }
 
   if (state.lastMeta.mode === "passage") {
+    const navigation = getBookNavigation(
+      state.results[0].bookEn,
+      state.results[0].chapter,
+      state.results[0].bookZh
+    );
     const footerCopyState = getResultsFooterCopyState(visibleTranslations);
+    const previousReference = navigation?.previous
+      ? formatChapterReference(navigation.previous.bookZh, navigation.previous.chapter)
+      : "";
+    const nextReference = navigation?.next
+      ? formatChapterReference(navigation.next.bookZh, navigation.next.chapter)
+      : "";
 
     return `
       <section class="results-footer">
+        <div class="chapter-navigation">
+          <button
+            class="secondary-button"
+            type="button"
+            data-results-action="navigate-chapter"
+            data-chapter-reference="${escapeHtml(previousReference)}"
+            ${previousReference ? "" : "disabled"}
+          >
+            上一章
+          </button>
+          <div class="chapter-navigation-meta">
+            <p class="results-footer-label">經文閱讀導覽</p>
+            <strong>${escapeHtml(`${state.results[0].bookZh} ${state.results[0].chapter} 章`)}</strong>
+          </div>
+          <button
+            class="secondary-button"
+            type="button"
+            data-results-action="navigate-chapter"
+            data-chapter-reference="${escapeHtml(nextReference)}"
+            ${nextReference ? "" : "disabled"}
+          >
+            下一章
+          </button>
+        </div>
         <div class="results-footer-actions">
           <p class="results-footer-note" data-results-copy-note>
             ${escapeHtml(footerCopyState.note)}
