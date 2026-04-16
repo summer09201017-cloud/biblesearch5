@@ -100,7 +100,7 @@ const KEYWORD_MULTI_VERSION_FETCH_MULTIPLIER = 2;
 const KEYWORD_MULTI_VERSION_FETCH_CAP = 240;
 const KEYWORD_MAX_EXPANDED_RESULTS = 20;
 const KEYWORD_AUTO_SEARCH_MIN_LENGTH = 2;
-const KEYWORD_AUTO_SEARCH_DELAY_MS = 260;
+const KEYWORD_AUTO_SEARCH_DELAY_MS = 120;
 const REQUEST_TIMEOUT_MS = 15000;
 const BACKGROUND_FULL_LOAD_DELAY_MS = 400;
 const DEFAULT_VERSE_FONT_SIZE = 16;
@@ -246,8 +246,9 @@ function scheduleKeywordAutoSearch(options = {}) {
 
   clearKeywordAutoSearchTimer();
   const query = dom.queryInput.value.trim();
+  const queryLength = getSearchableQueryLength(query);
 
-  if (getSearchableQueryLength(query) < KEYWORD_AUTO_SEARCH_MIN_LENGTH) {
+  if (queryLength < KEYWORD_AUTO_SEARCH_MIN_LENGTH) {
     resetKeywordAutoSearchState(query);
     setStatus(
       query
@@ -262,7 +263,7 @@ function scheduleKeywordAutoSearch(options = {}) {
     void handleSearch();
   };
 
-  if (options.immediate) {
+  if (options.immediate || queryLength === KEYWORD_AUTO_SEARCH_MIN_LENGTH) {
     runSearch();
     return;
   }
