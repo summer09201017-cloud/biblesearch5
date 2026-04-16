@@ -17,6 +17,7 @@
   --font-display: "Palatino Linotype", "Book Antiqua", "Noto Serif TC", serif;
   --font-sans: "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --font-verse: "Georgia", "Noto Serif TC", serif;
+  --verse-font-size: 16px;
 }
 
 * {
@@ -287,9 +288,49 @@ a {
   text-transform: uppercase;
 }
 
-.translation-controls {
+.translation-controls,
+.reading-controls {
   display: grid;
   gap: 10px;
+}
+
+.font-size-control {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(28, 43, 56, 0.08);
+}
+
+.font-size-control > span {
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.font-size-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.font-size-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.font-size-range {
+  width: 100%;
+  accent-color: #0e5c68;
+}
+
+.font-size-value {
+  min-width: 3.6rem;
+  text-align: right;
+  color: var(--accent-deep);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .translation-toggle-list {
@@ -493,6 +534,14 @@ a {
   gap: 10px;
 }
 
+.result-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .result-title h3 {
   margin: 0;
   font-size: 1.18rem;
@@ -510,6 +559,29 @@ a {
 .result-reference-link:focus-visible {
   color: var(--accent-deep);
   border-color: rgba(16, 97, 100, 0.72);
+  outline: none;
+}
+
+.external-reference-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 97, 100, 0.16);
+  background: rgba(16, 97, 100, 0.08);
+  color: var(--accent-deep);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.external-reference-link:hover,
+.external-reference-link:focus-visible {
+  background: rgba(16, 97, 100, 0.14);
+  border-color: rgba(16, 97, 100, 0.28);
+  transform: translateY(-1px);
   outline: none;
 }
 
@@ -660,6 +732,11 @@ a {
   color: #0e5a5d;
 }
 
+.version-badge.niv {
+  background: rgba(204, 92, 44, 0.14);
+  color: #a34d22;
+}
+
 .version-badge.lcc {
   background: rgba(107, 79, 153, 0.14);
   color: #5f4490;
@@ -673,7 +750,7 @@ a {
   display: block;
   margin: 0;
   font-family: var(--font-verse);
-  font-size: 1rem;
+  font-size: var(--verse-font-size);
   line-height: 1.85;
 }
 
@@ -809,5 +886,18 @@ mark {
 
   .result-header-top {
     align-items: flex-start;
+  }
+
+  .result-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .font-size-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .font-size-value {
+    grid-column: 1 / -1;
   }
 }

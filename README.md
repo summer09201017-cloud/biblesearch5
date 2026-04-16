@@ -4,6 +4,7 @@
 
 - 和合本
 - ESV
+- NIV
 - 呂振中譯本
 - 新譯本
 - ASV
@@ -11,7 +12,8 @@
 
 ## 資料來源
 
-- 六個譯本都讀取本地 JSON 資料庫：[data/bible_data.json](C:/Users/agape250/Desktop/聖經查詢COD/data/bible_data.json)
+- 六個既有譯本都讀取本地整合 JSON 資料庫：[data/bible_data.json](C:/Users/agape250/Desktop/聖經查詢COD/data/bible_data.json)
+- `NIV` 讀取分卷 JSON：[data/NIV](C:/Users/HFP/Downloads/聖經查詢COD/聖經查詢COD/data/NIV)
 - 其中 `ESV` 與 `呂振中譯本` 另外保留 FHL 下載檔：
   - [data/fhl_esv.json](C:/Users/agape250/Desktop/聖經查詢COD/data/fhl_esv.json)
   - [data/fhl_lcc.json](C:/Users/agape250/Desktop/聖經查詢COD/data/fhl_lcc.json)
@@ -20,8 +22,10 @@
 ## 功能
 
 - 經文定位：可輸入 `約 3:16-18`、`John 1`、`詩 23`、`創 1:1-5`
-- 關鍵字搜尋：先用指定譯本搜尋整本聖經，再展開同一節的六個譯本
+- 關鍵字搜尋：先用指定譯本搜尋整本聖經，再展開同一節的多個譯本
 - 英文關鍵字：未指定譯本時優先用 `ESV`
+- 閱讀設定：可調整經文字型大小，會保留在瀏覽器
+- 信望愛註釋：搜尋結果可直接打開對應經文註釋
 - 響應式版面：適合手機與桌機
 - PWA：可安裝成類 App 使用
 - Netlify Functions：提供 `/api/passage` 與 `/api/search`

@@ -9,16 +9,16 @@
     <title>多譯本聖經查詢</title>
     <meta
       name="description"
-      content="支援和合本、ESV、呂振中譯本、新譯本、ASV、KJV 的多譯本聖經查詢網站，手機與電腦都可使用。"
+      content="支援和合本、ESV、NIV、呂振中譯本、新譯本、ASV、KJV 的多譯本聖經查詢網站，手機與電腦都可使用。"
     />
     <meta name="theme-color" content="#0d3b48" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="聖經查詢" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260402c" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260416b" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/styles.css?v=20260402c" />
+    <link rel="stylesheet" href="/styles.css?v=20260416b" />
   </head>
   <body>
     <div class="shell">
@@ -28,7 +28,7 @@
           <h1>多譯本聖經查詢</h1>
           <p class="lead">
             一次比對 <strong>和合本</strong>、<strong>ESV</strong>、<strong>呂振中譯本</strong>、
-            <strong>新譯本</strong>、<strong>ASV</strong>、<strong>KJV</strong>，
+            <strong>NIV</strong>、<strong>新譯本</strong>、<strong>ASV</strong>、<strong>KJV</strong>，
             支援手機與桌機的多譯本經文與關鍵字查詢。
           </p>
         </div>
@@ -78,6 +78,7 @@
                 <select id="keyword-version" class="select-field">
                   <option value="unv" selected>和合本</option>
                   <option value="esv">ESV</option>
+                  <option value="niv">NIV</option>
                   <option value="lcc">呂振中譯本</option>
                   <option value="ncv">新譯本</option>
                   <option value="asv">ASV</option>
@@ -100,6 +101,27 @@
             <div class="translation-controls" aria-label="顯示譯本">
               <p class="field-legend">顯示譯本</p>
               <div id="translation-toggles" class="translation-toggle-list"></div>
+            </div>
+
+            <div class="reading-controls" aria-label="閱讀設定">
+              <p class="field-legend">閱讀設定</p>
+              <label class="font-size-control" for="font-size-range">
+                <span>經文字體大小</span>
+                <div class="font-size-row">
+                  <span class="font-size-hint">小</span>
+                  <input
+                    id="font-size-range"
+                    class="font-size-range"
+                    type="range"
+                    min="14"
+                    max="24"
+                    step="1"
+                    value="16"
+                  />
+                  <span class="font-size-hint">大</span>
+                  <output id="font-size-value" class="font-size-value" for="font-size-range">100%</output>
+                </div>
+              </label>
             </div>
           </form>
 
@@ -143,8 +165,9 @@
 
       <footer class="footer">
         <p>
-          六個譯本目前都讀取本地 JSON 資料庫；其中 ESV 與呂振中譯本是依照信望愛
-          `qb.php` 章節資料下載整本後整合。若有譯本文字版權問題，請以各譯本權利人公告為準。
+          七個譯本目前都讀取本地 JSON 資料庫；其中 ESV 與呂振中譯本是依照信望愛
+          `qb.php` 章節資料下載整本後整合，NIV 則讀取本機 `data/NIV` 目錄中的章節 JSON。
+          若有譯本文字版權問題，請以各譯本權利人公告為準。
         </p>
         <p class="footer-links">
           <a href="https://bible.fhl.net/api/" target="_blank" rel="noreferrer">信望愛 API 文件</a>
@@ -156,7 +179,7 @@
       </footer>
     </div>
 
-    <script type="module" src="/app.js?v=20260402c"></script>
-    <script type="module" src="/pwa.js?v=20260402c"></script>
+    <script type="module" src="/app.js?v=20260416b"></script>
+    <script type="module" src="/pwa.js?v=20260416b"></script>
   </body>
 </html>

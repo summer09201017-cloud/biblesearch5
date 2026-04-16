@@ -1,7 +1,7 @@
 {
   "name": "多譯本聖經查詢",
   "short_name": "聖經查詢",
-  "description": "查詢和合本、ESV、新譯本、ASV、KJV，支援手機與桌機。",
+  "description": "查詢和合本、ESV、NIV、新譯本、ASV、KJV，支援手機與桌機。",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

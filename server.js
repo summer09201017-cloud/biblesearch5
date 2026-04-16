@@ -18,6 +18,7 @@ const moduleDir =
 const publicDir = path.join(moduleDir, "public");
 const dataDir = path.join(moduleDir, "data");
 const localBiblePath = path.join(dataDir, "bible_data.json");
+const nivDataDir = path.join(dataDir, "NIV");
 const port = Number(process.env.PORT || 4173);
 
 const MIME_TYPES = {
@@ -31,16 +32,86 @@ const MIME_TYPES = {
   ".webmanifest": "application/manifest+json; charset=utf-8"
 };
 
-const VERSION_WHITELIST = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc"]);
-const LOCAL_VERSION_IDS = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc"]);
+const VERSION_WHITELIST = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc", "niv"]);
+const LOCAL_VERSION_IDS = new Set(["asv", "kjv", "unv", "ncv", "esv", "lcc", "niv"]);
 const VERSION_NAMES = {
   asv: "ASV",
   kjv: "KJV",
   unv: "和合本",
   esv: "ESV",
   lcc: "呂振中譯本",
-  ncv: "新譯本"
+  ncv: "新譯本",
+  niv: "NIV"
 };
+
+const NIV_BOOK_CODE_BY_ENGS = new Map([
+  ["Gen", "GEN"],
+  ["Exod", "EXO"],
+  ["Lev", "LEV"],
+  ["Num", "NUM"],
+  ["Deut", "DEU"],
+  ["Josh", "JOS"],
+  ["Judg", "JDG"],
+  ["Ruth", "RUT"],
+  ["1Sam", "1SA"],
+  ["2Sam", "2SA"],
+  ["1Kgs", "1KI"],
+  ["2Kgs", "2KI"],
+  ["1Chr", "1CH"],
+  ["2Chr", "2CH"],
+  ["Ezra", "EZR"],
+  ["Neh", "NEH"],
+  ["Esth", "EST"],
+  ["Job", "JOB"],
+  ["Ps", "PSA"],
+  ["Prov", "PRO"],
+  ["Eccl", "ECC"],
+  ["Song", "SNG"],
+  ["Isa", "ISA"],
+  ["Jer", "JER"],
+  ["Lam", "LAM"],
+  ["Ezek", "EZK"],
+  ["Dan", "DAN"],
+  ["Hos", "HOS"],
+  ["Joel", "JOL"],
+  ["Amos", "AMO"],
+  ["Obad", "OBA"],
+  ["Jonah", "JON"],
+  ["Mic", "MIC"],
+  ["Nah", "NAH"],
+  ["Hab", "HAB"],
+  ["Zeph", "ZEP"],
+  ["Hag", "HAG"],
+  ["Zech", "ZEC"],
+  ["Mal", "MAL"],
+  ["Matt", "MAT"],
+  ["Mark", "MRK"],
+  ["Luke", "LUK"],
+  ["John", "JHN"],
+  ["Acts", "ACT"],
+  ["Rom", "ROM"],
+  ["1Cor", "1CO"],
+  ["2Cor", "2CO"],
+  ["Gal", "GAL"],
+  ["Eph", "EPH"],
+  ["Phil", "PHP"],
+  ["Col", "COL"],
+  ["1Thess", "1TH"],
+  ["2Thess", "2TH"],
+  ["1Tim", "1TI"],
+  ["2Tim", "2TI"],
+  ["Titus", "TIT"],
+  ["Phlm", "PHM"],
+  ["Heb", "HEB"],
+  ["Jas", "JAS"],
+  ["1Pet", "1PE"],
+  ["2Pet", "2PE"],
+  ["1John", "1JN"],
+  ["2John", "2JN"],
+  ["3John", "3JN"],
+  ["Jude", "JUD"],
+  ["Rev", "REV"]
+]);
 
 const FHL_BASE = "https://bible.fhl.net/json";
 
@@ -122,6 +193,7 @@ const BOOK_BY_ALIAS = new Map(
 );
 
 let localBibleStorePromise;
+let nivVerseLookupPromise;
 
 function normalizeAlias(value) {
   return String(value || "")
@@ -173,11 +245,56 @@ async function fetchFhlJson(url, errorLabel) {
   return remoteResponse.json();
 }
 
+async function loadNivVerseLookup() {
+  if (!nivVerseLookupPromise) {
+    nivVerseLookupPromise = Promise.all(
+      [...NIV_BOOK_CODE_BY_ENGS.entries()].map(async ([engs, bookCode]) => {
+        try {
+          const raw = await readFile(path.join(nivDataDir, `${bookCode}.json`), "utf8");
+          return { engs, chapters: JSON.parse(raw) };
+        } catch {
+          return { engs, chapters: null };
+        }
+      })
+    )
+      .then((books) => {
+        const lookup = new Map();
+
+        for (const { engs, chapters } of books) {
+          if (!chapters || typeof chapters !== "object") {
+            continue;
+          }
+
+          for (const [chapterKey, verses] of Object.entries(chapters)) {
+            const chapter = Number(chapterKey);
+            if (!Number.isInteger(chapter) || !Array.isArray(verses)) {
+              continue;
+            }
+
+            verses.forEach((text, index) => {
+              lookup.set(makeRefKey(engs, chapter, index + 1), String(text || "").trim());
+            });
+          }
+        }
+
+        return lookup;
+      })
+      .catch((error) => {
+        nivVerseLookupPromise = null;
+        throw error;
+      });
+  }
+
+  return nivVerseLookupPromise;
+}
+
 async function loadLocalBibleStore() {
   if (!localBibleStorePromise) {
-    localBibleStorePromise = readFile(localBiblePath, "utf8")
-      .then((raw) => JSON.parse(raw))
-      .then((records) => {
+    localBibleStorePromise = Promise.all([
+      readFile(localBiblePath, "utf8").then((raw) => JSON.parse(raw)),
+      loadNivVerseLookup()
+    ])
+      .then(([records, nivVerseLookup]) => {
         const verses = [];
         const byBook = new Map();
         const byRef = new Map();
@@ -188,19 +305,24 @@ async function loadLocalBibleStore() {
             continue;
           }
 
+          const chapter = Number(entry.chapter);
+          const verseNumber = Number(entry.verse);
+          const refKey = makeRefKey(book.engs, chapter, verseNumber);
+
           const verse = {
             engs: book.engs,
             bookFull: book.full,
             chineses: book.zhShort,
-            chapter: Number(entry.chapter),
-            sec: Number(entry.verse),
+            chapter,
+            sec: verseNumber,
             texts: {
               asv: String(entry.ASV || "").trim(),
               kjv: String(entry.KJV || "").trim(),
               unv: String(entry.CUV || "").trim(),
               esv: String(entry.ESV || "").trim(),
               lcc: String(entry.LCC || "").trim(),
-              ncv: String(entry.NCV || "").trim()
+              ncv: String(entry.NCV || "").trim(),
+              niv: String(nivVerseLookup.get(refKey) || "").trim()
             }
           };
 
@@ -210,7 +332,8 @@ async function loadLocalBibleStore() {
             unv: normalizeSearchText(verse.texts.unv),
             esv: normalizeSearchText(verse.texts.esv),
             lcc: normalizeSearchText(verse.texts.lcc),
-            ncv: normalizeSearchText(verse.texts.ncv)
+            ncv: normalizeSearchText(verse.texts.ncv),
+            niv: normalizeSearchText(verse.texts.niv)
           };
 
           verses.push(verse);
@@ -220,7 +343,7 @@ async function loadLocalBibleStore() {
           }
 
           byBook.get(book.full).push(verse);
-          byRef.set(makeRefKey(book.engs, verse.chapter, verse.sec), verse);
+          byRef.set(refKey, verse);
         }
 
         return { verses, byBook, byRef };

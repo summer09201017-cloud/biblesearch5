@@ -1,6 +1,7 @@
 const TRANSLATIONS = [
   { id: "unv", label: "和合本", fullLabel: "和合本" },
   { id: "esv", label: "ESV", fullLabel: "English Standard Version" },
+  { id: "niv", label: "NIV", fullLabel: "New International Version" },
   { id: "lcc", label: "呂振中", fullLabel: "呂振中譯本" },
   { id: "ncv", label: "新譯本", fullLabel: "新譯本" },
   { id: "asv", label: "ASV", fullLabel: "American Standard Version" },
@@ -79,6 +80,7 @@ const BOOKS = [
 const BOOK_BY_ENGS = new Map(BOOKS.map((book) => [book.engs, book]));
 const CHINESE_SEARCH_VERSION_IDS = ["unv", "lcc", "ncv"];
 const BIBLE_BOOK_ORDER = new Map(BOOKS.map((book, index) => [book.engs, index]));
+const FHL_COMMENTARY_BASE = "https://bible.fhl.net/new/com.php";
 
 const MODE_COPY = {
   passage: {
@@ -88,7 +90,7 @@ const MODE_COPY = {
   },
   keyword: {
     placeholder: "例如：愛、恩典、love、faith",
-    helper: "輸入到第 2 個字後會自動搜尋。中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，再把同一節的多個譯本一起列出。",
+    helper: "輸入到第 2 個字後會自動搜尋。中文關鍵字會聯合搜尋和合本、呂振中、新譯本；英文關鍵字會優先用 ESV，也可手動切換到 NIV，再把同一節的多個譯本一起列出。",
     examples: ["愛", "恩典", "love", "\"eternal life\""]
   }
 };
@@ -101,6 +103,10 @@ const KEYWORD_AUTO_SEARCH_MIN_LENGTH = 2;
 const KEYWORD_AUTO_SEARCH_DELAY_MS = 260;
 const REQUEST_TIMEOUT_MS = 15000;
 const BACKGROUND_FULL_LOAD_DELAY_MS = 400;
+const DEFAULT_VERSE_FONT_SIZE = 16;
+const MIN_VERSE_FONT_SIZE = 14;
+const MAX_VERSE_FONT_SIZE = 24;
+const VERSE_FONT_SIZE_STORAGE_KEY = "bible-verse-font-size";
 
 const state = {
   mode: "passage",
@@ -125,6 +131,8 @@ const dom = {
   copyrightYear: document.getElementById("copyright-year"),
   copyVersesButton: document.getElementById("copy-verses-button"),
   exampleChips: document.getElementById("example-chips"),
+  fontSizeRange: document.getElementById("font-size-range"),
+  fontSizeValue: document.getElementById("font-size-value"),
   keywordControls: document.getElementById("keyword-controls"),
   keywordVersion: document.getElementById("keyword-version"),
   lineShareButton: document.getElementById("line-share-button"),
@@ -152,6 +160,56 @@ function parseKeywordLimit(value) {
   }
 
   return numeric;
+}
+
+function clampVerseFontSize(value) {
+  const numeric = Math.trunc(Number(value));
+  if (!Number.isFinite(numeric)) {
+    return DEFAULT_VERSE_FONT_SIZE;
+  }
+
+  return Math.min(MAX_VERSE_FONT_SIZE, Math.max(MIN_VERSE_FONT_SIZE, numeric));
+}
+
+function updateVerseFontSizeDisplay(size) {
+  if (dom.fontSizeRange) {
+    dom.fontSizeRange.value = String(size);
+  }
+
+  if (dom.fontSizeValue) {
+    dom.fontSizeValue.textContent = `${Math.round((size / DEFAULT_VERSE_FONT_SIZE) * 100)}%`;
+  }
+}
+
+function applyVerseFontSize(value, options = {}) {
+  const size = clampVerseFontSize(value);
+  document.documentElement.style.setProperty("--verse-font-size", `${size}px`);
+  updateVerseFontSizeDisplay(size);
+
+  if (options.persist === false) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(VERSE_FONT_SIZE_STORAGE_KEY, String(size));
+  } catch {
+    // Ignore storage failures so reading controls still work in private modes.
+  }
+}
+
+function hydrateVerseFontSizePreference() {
+  let size = DEFAULT_VERSE_FONT_SIZE;
+
+  try {
+    const stored = window.localStorage.getItem(VERSE_FONT_SIZE_STORAGE_KEY);
+    if (stored !== null) {
+      size = Number(stored);
+    }
+  } catch {
+    size = DEFAULT_VERSE_FONT_SIZE;
+  }
+
+  applyVerseFontSize(size, { persist: false });
 }
 
 function clearKeywordAutoSearchTimer() {
@@ -471,6 +529,16 @@ function buildPassageHref(reference) {
   params.set("q", reference);
   params.set("shown", [...state.visibleTranslations].join(","));
   return `${window.location.pathname}?${params.toString()}`;
+}
+
+function buildFhlCommentaryHref(result) {
+  const url = new URL(FHL_COMMENTARY_BASE);
+  url.searchParams.set("book", "3");
+  url.searchParams.set("engs", result.bookEn || "");
+  url.searchParams.set("chap", String(result.chapter));
+  url.searchParams.set("sec", String(result.verse));
+  url.searchParams.set("m", "0");
+  return url.toString();
 }
 
 function getBookNavigation(bookEn, chapter, fallbackBookZh = "") {
@@ -997,6 +1065,7 @@ function renderResults() {
       const verseReference = formatVerseReference(result);
       const chapterReference = formatChapterReference(result.bookZh, result.chapter);
       const passageHref = buildPassageHref(chapterReference);
+      const commentaryHref = buildFhlCommentaryHref(result);
       const titleMarkup =
         state.lastMeta?.mode === "keyword"
           ? `
@@ -1089,7 +1158,17 @@ function renderResults() {
                 ${state.lastMeta?.mode === "passage" ? selectionControl : ""}
                 <span class="pill">${escapeHtml(result.bookEn)}</span>
               </div>
-              ${state.lastMeta?.mode === "keyword" ? selectionControl : ""}
+              <div class="result-header-actions">
+                <a
+                  class="external-reference-link"
+                  href="${escapeHtml(commentaryHref)}"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  信望愛註釋
+                </a>
+                ${state.lastMeta?.mode === "keyword" ? selectionControl : ""}
+              </div>
             </div>
             ${keywordMeta}
           </header>
@@ -1536,6 +1615,9 @@ function bindEvents() {
   dom.shareButton.addEventListener("click", copyShareLink);
   dom.lineShareButton.addEventListener("click", shareToLine);
   dom.copyVersesButton.addEventListener("click", copySelectedVerses);
+  dom.fontSizeRange?.addEventListener("input", () => {
+    applyVerseFontSize(dom.fontSizeRange.value);
+  });
 
   dom.translationToggles.addEventListener("change", (event) => {
     const input = event.target.closest(".translation-toggle-input");
@@ -1610,6 +1692,7 @@ function bindEvents() {
 function init() {
   dom.copyrightYear.textContent = `© ${new Date().getFullYear()} 多譯本聖經查詢介面`;
   dom.shareButton.hidden = false;
+  hydrateVerseFontSizePreference();
   renderTranslationToggles();
   bindEvents();
   hydrateFromUrl();
