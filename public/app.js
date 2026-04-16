@@ -912,6 +912,10 @@ function renderStatusFromMeta() {
     pills.push(`來源 ${state.lastMeta.sourceLabel}`);
   }
 
+  if (Number.isFinite(state.lastMeta.elapsedMs)) {
+    pills.push(`耗時 ${state.lastMeta.elapsedMs} ms`);
+  }
+
   setStatus(state.lastMeta.summary, pills);
 }
 
@@ -1241,6 +1245,8 @@ function scheduleBackgroundKeywordLoad(query, searchToken) {
 }
 
 async function loadKeywordResultsInBackground(query, searchToken) {
+  const startTime = performance.now();
+
   try {
     const { results, searchPlan } = await searchKeyword(query, { forceAll: true });
     if (
@@ -1257,6 +1263,7 @@ async function loadKeywordResultsInBackground(query, searchToken) {
       mode: "keyword",
       sourceLabel: searchPlan.sourceLabel,
       sourceVersions: searchPlan.versions,
+      elapsedMs: Math.max(1, Math.round(performance.now() - startTime)),
       summary:
         searchPlan.versions.length > 1
           ? `已完成中文三譯本聯合搜尋：${query}（已載入全部 ${results.length} 筆）`
@@ -1289,6 +1296,7 @@ async function handleSearch(event) {
     return;
   }
 
+  const startTime = performance.now();
   const searchToken = ++activeKeywordSearchToken;
   let shouldAutoLoadAll = false;
 
@@ -1309,6 +1317,7 @@ async function handleSearch(event) {
 
       state.lastMeta = {
         mode: "passage",
+        elapsedMs: Math.max(1, Math.round(performance.now() - startTime)),
         summary: `已完成經文閱讀：${query}`
       };
     } else {
@@ -1331,6 +1340,7 @@ async function handleSearch(event) {
         mode: "keyword",
         sourceLabel: searchPlan.sourceLabel,
         sourceVersions: searchPlan.versions,
+        elapsedMs: Math.max(1, Math.round(performance.now() - startTime)),
         summary:
           searchPlan.versions.length > 1
             ? `已完成中文三譯本聯合搜尋：${query}${pendingNote}${speedNote}`
