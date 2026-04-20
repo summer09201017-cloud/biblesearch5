@@ -67,7 +67,7 @@ a {
 }
 
 .shell {
-  width: min(1180px, calc(100% - 28px));
+  width: min(100%, 1180px);
   margin: 0 auto;
   padding: 22px 0 36px;
 }
@@ -111,7 +111,7 @@ a {
 .hero h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-size: clamp(1.7rem, 4vw, 3rem);
   line-height: 0.95;
 }
 
@@ -236,6 +236,11 @@ a {
   box-shadow: 0 18px 34px rgba(13, 59, 72, 0.18);
 }
 
+#submit-button {
+  min-width: 96px;
+  padding: 0 11px;
+}
+
 #copy-verses-button,
 .secondary-button[data-results-action="copy-verses"] {
   background: linear-gradient(135deg, #b63f3f, #8f2323);
@@ -274,6 +279,10 @@ a {
 .control-row {
   display: grid;
   gap: 12px;
+}
+
+#passage-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .field {
@@ -836,6 +845,10 @@ mark {
     grid-template-columns: repeat(2, minmax(180px, 240px));
   }
 
+  #passage-controls {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
   .helper-row,
   .status-bar {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -845,7 +858,7 @@ mark {
 
 @media (max-width: 759px) {
   .shell {
-    width: min(100% - 18px, 900px);
+    width: min(100%, 900px);
     padding-top: 10px;
   }
 

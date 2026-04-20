@@ -85,7 +85,7 @@ const FHL_COMMENTARY_BASE = "https://bible.fhl.net/new/com.php";
 const MODE_COPY = {
   passage: {
     placeholder: "例如：約 3:16-18",
-    helper: "輸入章節範圍，例如 `約 3:16-18`、`John 1`、`創 1:1-5`，也可在下方切換上一章與下一章。",
+    helper: "可直接輸入章節範圍，或用下拉選單選擇書卷、章、節；也可在結果上方切換上一章與下一章。",
     examples: ["約 3:16-18", "John 1", "詩 23", "創 1:1-5"]
   },
   keyword: {
@@ -104,8 +104,8 @@ const KEYWORD_AUTO_SEARCH_DELAY_MS = 120;
 const REQUEST_TIMEOUT_MS = 15000;
 const BACKGROUND_FULL_LOAD_DELAY_MS = 400;
 const DEFAULT_VERSE_FONT_SIZE = 16;
-const MIN_VERSE_FONT_SIZE = 14;
-const MAX_VERSE_FONT_SIZE = 24;
+const MIN_VERSE_FONT_SIZE = 8;
+const MAX_VERSE_FONT_SIZE = 40;
 const VERSE_FONT_SIZE_STORAGE_KEY = "bible-verse-font-size";
 
 const state = {
@@ -115,6 +115,11 @@ const state = {
   isLoading: false,
   error: "",
   lastMeta: null,
+  passageSelection: {
+    bookEn: BOOKS[0].engs,
+    chapter: 1,
+    verse: ""
+  },
   selectedResultKeys: new Set(),
   visibleTranslations: new Set(TRANSLATIONS.map((translation) => translation.id)),
   pendingFocusResultKey: ""
@@ -138,6 +143,10 @@ const dom = {
   lineShareButton: document.getElementById("line-share-button"),
   modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
   modeDescription: document.getElementById("mode-description"),
+  passageBook: document.getElementById("passage-book"),
+  passageChapter: document.getElementById("passage-chapter"),
+  passageControls: document.getElementById("passage-controls"),
+  passageVerse: document.getElementById("passage-verse"),
   queryInput: document.getElementById("query-input"),
   resultLimit: document.getElementById("result-limit"),
   results: document.getElementById("results"),
@@ -212,6 +221,106 @@ function hydrateVerseFontSizePreference() {
   applyVerseFontSize(size, { persist: false });
 }
 
+function getPassageSelectionBook(bookEn = state.passageSelection.bookEn) {
+  return BOOK_BY_ENGS.get(bookEn) || BOOKS[0];
+}
+
+function normalizePassageVerse(verse) {
+  if (verse === "" || verse === null || verse === undefined) {
+    return "";
+  }
+
+  const numeric = Math.trunc(Number(verse));
+  return Number.isFinite(numeric) && numeric > 0 ? String(numeric) : "";
+}
+
+function buildPassageQueryFromSelection(selection = state.passageSelection) {
+  const book = getPassageSelectionBook(selection.bookEn);
+  return selection.verse
+    ? `${book.zh} ${selection.chapter}:${selection.verse}`
+    : `${book.zh} ${selection.chapter}`;
+}
+
+function renderPassageBookOptions(selectedBookEn = state.passageSelection.bookEn) {
+  dom.passageBook.innerHTML = BOOKS
+    .map((book) => `<option value="${book.engs}" ${book.engs === selectedBookEn ? "selected" : ""}>${escapeHtml(book.zh)}</option>`)
+    .join("");
+}
+
+function renderPassageChapterOptions(bookEn = state.passageSelection.bookEn, selectedChapter = state.passageSelection.chapter) {
+  const book = getPassageSelectionBook(bookEn);
+  dom.passageChapter.innerHTML = Array.from({ length: book.chapters }, (_, index) => {
+    const chapter = index + 1;
+    return `<option value="${chapter}" ${chapter === selectedChapter ? "selected" : ""}>${chapter}</option>`;
+  }).join("");
+}
+
+function renderPassageVerseOptions(verseNumbers = [], selectedVerse = state.passageSelection.verse) {
+  const normalizedSelectedVerse = normalizePassageVerse(selectedVerse);
+  const hasSelectedVerse = normalizedSelectedVerse && verseNumbers.includes(Number(normalizedSelectedVerse));
+
+  dom.passageVerse.innerHTML = [
+    `<option value="" ${hasSelectedVerse ? "" : "selected"}>整章</option>`,
+    ...verseNumbers.map((verse) => `<option value="${verse}" ${String(verse) === normalizedSelectedVerse ? "selected" : ""}>${verse}</option>`)
+  ].join("");
+}
+
+function syncPassageQueryInput() {
+  if (state.mode !== "passage") {
+    return;
+  }
+
+  dom.queryInput.value = buildPassageQueryFromSelection();
+}
+
+async function syncPassageControls(selection = {}, options = {}) {
+  const book = getPassageSelectionBook(selection.bookEn ?? state.passageSelection.bookEn);
+  const chapterValue = Math.trunc(Number(selection.chapter ?? state.passageSelection.chapter ?? 1));
+  const chapter = Math.min(book.chapters, Math.max(1, Number.isFinite(chapterValue) ? chapterValue : 1));
+  const preferredVerse = normalizePassageVerse(selection.verse ?? state.passageSelection.verse);
+
+  state.passageSelection = {
+    bookEn: book.engs,
+    chapter,
+    verse: preferredVerse
+  };
+
+  renderPassageBookOptions(book.engs);
+  renderPassageChapterOptions(book.engs, chapter);
+  renderPassageVerseOptions([], "");
+
+  let verseNumbers = [];
+  try {
+    const chapterQuery = `${book.zh} ${chapter}`;
+    const records = await fetchPassageRecords("unv", chapterQuery);
+    verseNumbers = records
+      .map((row) => row.verse)
+      .filter((verse, index, values) => Number.isFinite(verse) && values.indexOf(verse) === index);
+  } catch {
+    verseNumbers = [];
+  }
+
+  const resolvedVerse = preferredVerse && verseNumbers.includes(Number(preferredVerse))
+    ? preferredVerse
+    : "";
+
+  state.passageSelection = {
+    bookEn: book.engs,
+    chapter,
+    verse: resolvedVerse
+  };
+
+  renderPassageVerseOptions(verseNumbers, resolvedVerse);
+
+  if (options.syncInput !== false) {
+    syncPassageQueryInput();
+  }
+
+  if (options.triggerSearch) {
+    void handleSearch();
+  }
+}
+
 function clearKeywordAutoSearchTimer() {
   if (!keywordAutoSearchTimer) {
     return;
@@ -278,6 +387,7 @@ function updateMode(mode, options = {}) {
   dom.queryInput.placeholder = copy.placeholder;
   dom.modeDescription.textContent = copy.helper;
   dom.keywordControls.hidden = mode !== "keyword";
+  dom.passageControls.hidden = mode !== "passage";
 
   for (const button of dom.modeButtons) {
     const active = button.dataset.mode === mode;
@@ -288,7 +398,11 @@ function updateMode(mode, options = {}) {
   renderExampleChips(copy.examples);
 
   if (!options.keepInput) {
-    dom.queryInput.value = "";
+    if (mode === "passage") {
+      syncPassageQueryInput();
+    } else {
+      dom.queryInput.value = "";
+    }
   }
 }
 
@@ -1320,6 +1434,17 @@ async function handleSearch(event) {
         elapsedMs: Math.max(1, Math.round(performance.now() - startTime)),
         summary: `已完成經文閱讀：${query}`
       };
+
+      if (state.results.length) {
+        void syncPassageControls(
+          {
+            bookEn: state.results[0].bookEn,
+            chapter: state.results[0].chapter,
+            verse: state.results.length === 1 ? state.results[0].verse : ""
+          },
+          { syncInput: false }
+        );
+      }
     } else {
       const { results, searchPlan, meta } = await searchKeyword(query);
       if (searchToken !== activeKeywordSearchToken) {
@@ -1597,6 +1722,36 @@ function bindEvents() {
     scheduleKeywordAutoSearch({ immediate: true });
   });
 
+  dom.passageBook.addEventListener("change", () => {
+    void syncPassageControls(
+      {
+        bookEn: dom.passageBook.value,
+        chapter: 1,
+        verse: ""
+      },
+      { triggerSearch: true }
+    );
+  });
+
+  dom.passageChapter.addEventListener("change", () => {
+    void syncPassageControls(
+      {
+        chapter: Number(dom.passageChapter.value),
+        verse: ""
+      },
+      { triggerSearch: true }
+    );
+  });
+
+  dom.passageVerse.addEventListener("change", () => {
+    state.passageSelection = {
+      ...state.passageSelection,
+      verse: normalizePassageVerse(dom.passageVerse.value)
+    };
+    syncPassageQueryInput();
+    void handleSearch();
+  });
+
   dom.modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       updateMode(button.dataset.mode);
@@ -1705,6 +1860,7 @@ function init() {
   dom.shareButton.hidden = false;
   hydrateVerseFontSizePreference();
   renderTranslationToggles();
+  void syncPassageControls(state.passageSelection, { syncInput: false });
   bindEvents();
   hydrateFromUrl();
   updateActionButtons();
