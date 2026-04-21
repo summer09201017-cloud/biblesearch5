@@ -1,5 +1,6 @@
 const INSTALL_BUTTON = document.getElementById("install-button");
 let deferredInstallPrompt = null;
+let isRefreshingForUpdate = false;
 
 function isStandaloneMode() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -49,10 +50,59 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("/sw.js?v=20260420c");
+    const registration = await navigator.serviceWorker.register("/sw.js?v=20260421a");
+    watchServiceWorker(registration);
+    navigator.serviceWorker.addEventListener("controllerchange", refreshForUpdatedWorker);
+    triggerServiceWorkerUpdate(registration);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        triggerServiceWorkerUpdate(registration);
+      }
+    });
   } catch (error) {
     console.warn("Service worker registration failed:", error);
   }
+}
+
+function refreshForUpdatedWorker() {
+  if (isRefreshingForUpdate) {
+    return;
+  }
+
+  isRefreshingForUpdate = true;
+  window.location.reload();
+}
+
+function activateWaitingWorker(registration) {
+  if (!registration?.waiting) {
+    return false;
+  }
+
+  registration.waiting.postMessage({ type: "SKIP_WAITING" });
+  return true;
+}
+
+function watchServiceWorker(registration) {
+  activateWaitingWorker(registration);
+
+  registration.addEventListener("updatefound", () => {
+    const installing = registration.installing;
+    if (!installing) {
+      return;
+    }
+
+    installing.addEventListener("statechange", () => {
+      if (installing.state === "installed" && navigator.serviceWorker.controller) {
+        activateWaitingWorker(registration);
+      }
+    });
+  });
+}
+
+function triggerServiceWorkerUpdate(registration) {
+  registration.update().catch((error) => {
+    console.warn("Service worker update check failed:", error);
+  });
 }
 
 window.addEventListener("beforeinstallprompt", (event) => {

@@ -1,13 +1,14 @@
-const VERSION = "20260420c";
-const STATIC_CACHE = `bible-static-${VERSION}`;
-const API_CACHE = `bible-api-${VERSION}`;
+const CACHE_VERSION = "v4";
+const ASSET_VERSION = "20260421a";
+const STATIC_CACHE = `bible-static-${CACHE_VERSION}`;
+const API_CACHE = `bible-api-${CACHE_VERSION}`;
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260420c",
+  `/styles.css?v=${ASSET_VERSION}`,
   "/app.js?v=20260419b",
-  "/pwa.js?v=20260420c",
-  "/manifest.webmanifest?v=20260420c",
+  `/pwa.js?v=${ASSET_VERSION}`,
+  `/manifest.webmanifest?v=${ASSET_VERSION}`,
   "/offline.html",
   "/icons/icon.svg",
   "/icons/icon-192.png",
@@ -33,6 +34,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") {
@@ -45,22 +52,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Navigation request failed with ${response.status}`);
-          }
-
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put("/index.html", copy));
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match("/index.html");
-          return cached || caches.match("/offline.html");
-        })
-    );
+    event.respondWith(networkFirstPage(request));
     return;
   }
 
@@ -71,6 +63,22 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(cacheFirst(request, STATIC_CACHE));
 });
+
+async function networkFirstPage(request) {
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Navigation request failed with ${response.status}`);
+    }
+
+    const cache = await caches.open(STATIC_CACHE);
+    await cache.put("/index.html", response.clone());
+    return response;
+  } catch {
+    const cached = await caches.match("/index.html");
+    return cached || caches.match("/offline.html");
+  }
+}
 
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request, { ignoreSearch: false });

@@ -685,7 +685,10 @@ async function serveStatic(requestUrl, response) {
   try {
     const file = await readFile(normalized);
     const cacheControl =
-      extension === ".html" || extension === ".js" || extension === ".css"
+      extension === ".html" ||
+      extension === ".js" ||
+      extension === ".css" ||
+      extension === ".webmanifest"
         ? "no-store"
         : "public, max-age=600";
 
