@@ -1,12 +1,12 @@
-const CACHE_VERSION = "v4";
-const ASSET_VERSION = "20260421a";
+const CACHE_VERSION = "v5";
+const ASSET_VERSION = "20260429a";
 const STATIC_CACHE = `bible-static-${CACHE_VERSION}`;
 const API_CACHE = `bible-api-${CACHE_VERSION}`;
 const APP_SHELL = [
   "/",
   "/index.html",
   `/styles.css?v=${ASSET_VERSION}`,
-  "/app.js?v=20260419b",
+  `/app.js?v=${ASSET_VERSION}`,
   `/pwa.js?v=${ASSET_VERSION}`,
   `/manifest.webmanifest?v=${ASSET_VERSION}`,
   "/offline.html",

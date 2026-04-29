@@ -50,7 +50,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    const registration = await navigator.serviceWorker.register("/sw.js?v=20260421a");
+    const registration = await navigator.serviceWorker.register("/sw.js?v=20260429a");
     watchServiceWorker(registration);
     navigator.serviceWorker.addEventListener("controllerchange", refreshForUpdatedWorker);
     triggerServiceWorkerUpdate(registration);
