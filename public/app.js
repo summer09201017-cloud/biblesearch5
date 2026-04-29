@@ -4,8 +4,7 @@ const TRANSLATIONS = [
   { id: "niv", label: "NIV", fullLabel: "New International Version" },
   { id: "lcc", label: "呂振中", fullLabel: "呂振中譯本" },
   { id: "ncv", label: "新譯本", fullLabel: "新譯本" },
-  { id: "asv", label: "ASV", fullLabel: "American Standard Version" },
-  { id: "kjv", label: "KJV", fullLabel: "King James Version" }
+  { id: "asv", label: "ASV", fullLabel: "American Standard Version" }
 ];
 
 const BOOKS = [
@@ -81,6 +80,9 @@ const BOOK_BY_ENGS = new Map(BOOKS.map((book) => [book.engs, book]));
 const CHINESE_SEARCH_VERSION_IDS = ["unv", "lcc", "ncv"];
 const BIBLE_BOOK_ORDER = new Map(BOOKS.map((book, index) => [book.engs, index]));
 const FHL_COMMENTARY_BASE = "https://bible.fhl.net/new/com.php";
+const DEFAULT_VISIBLE_TRANSLATION_IDS = TRANSLATIONS
+  .filter((translation) => translation.id !== "asv")
+  .map((translation) => translation.id);
 
 const MODE_COPY = {
   passage: {
@@ -104,8 +106,8 @@ const KEYWORD_AUTO_SEARCH_DELAY_MS = 120;
 const REQUEST_TIMEOUT_MS = 15000;
 const BACKGROUND_FULL_LOAD_DELAY_MS = 400;
 const DEFAULT_VERSE_FONT_SIZE = 16;
-const MIN_VERSE_FONT_SIZE = 8;
-const MAX_VERSE_FONT_SIZE = 40;
+const MIN_VERSE_FONT_SIZE = 12;
+const MAX_VERSE_FONT_SIZE = 32;
 const VERSE_FONT_SIZE_STORAGE_KEY = "bible-verse-font-size";
 
 const state = {
@@ -121,7 +123,7 @@ const state = {
     verse: ""
   },
   selectedResultKeys: new Set(),
-  visibleTranslations: new Set(TRANSLATIONS.map((translation) => translation.id)),
+  visibleTranslations: new Set(DEFAULT_VISIBLE_TRANSLATION_IDS),
   pendingFocusResultKey: ""
 };
 
@@ -385,7 +387,8 @@ function updateMode(mode, options = {}) {
   state.mode = mode;
   const copy = MODE_COPY[mode];
   dom.queryInput.placeholder = copy.placeholder;
-  dom.modeDescription.textContent = copy.helper;
+  dom.modeDescription.textContent = "";
+  dom.modeDescription.hidden = true;
   dom.keywordControls.hidden = mode !== "keyword";
   dom.passageControls.hidden = mode !== "passage";
 
@@ -395,7 +398,7 @@ function updateMode(mode, options = {}) {
     button.setAttribute("aria-selected", String(active));
   }
 
-  renderExampleChips(copy.examples);
+  renderExampleChips([]);
 
   if (!options.keepInput) {
     if (mode === "passage") {
@@ -407,6 +410,7 @@ function updateMode(mode, options = {}) {
 }
 
 function renderExampleChips(examples) {
+  dom.exampleChips.hidden = true;
   dom.exampleChips.innerHTML = examples
     .map(
       (item) =>

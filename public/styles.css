@@ -736,11 +736,6 @@ a {
   color: #195687;
 }
 
-.version-badge.kjv {
-  background: rgba(145, 104, 45, 0.14);
-  color: #744e0c;
-}
-
 .version-badge.unv {
   background: rgba(161, 55, 55, 0.14);
   color: #8d3131;
